@@ -1,0 +1,3 @@
+# chorequest
+
+ChoreQuest mobile client

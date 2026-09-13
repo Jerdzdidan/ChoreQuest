@@ -1,0 +1,6 @@
+# Training pipeline for the chore-verification model.
+# Python 3.13 on this machine; TensorFlow 2.21 ships a cp313 Windows wheel.
+tensorflow==2.21.0
+pillow>=11.0
+numpy>=2.0
+scikit-learn>=1.5

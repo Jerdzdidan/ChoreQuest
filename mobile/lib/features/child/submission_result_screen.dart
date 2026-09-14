@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -74,71 +75,141 @@ class SubmissionResultScreen extends ConsumerWidget {
     final current =
         balance != null && balance.hasValue ? balance.requireValue : null;
 
+    final approved = status == SubmissionStatus.approved;
+
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 132,
-                    height: 132,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colour.withValues(alpha: 0.14),
-                    ),
-                    child: Icon(icon, size: 76, color: colour),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(message, textAlign: TextAlign.center, style: text.titleMedium),
-                if (current != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'You have ${formatMinutes(current.spendableMinutes)} of screen time.',
-                    textAlign: TextAlign.center,
-                    style: text.titleLarge?.copyWith(color: colour),
-                  ),
-                  if (current.earningBlocked)
-                    Text(
-                      "That's all the screen time you can earn for now.",
-                      textAlign: TextAlign.center,
-                      style: text.bodyMedium,
-                    ),
-                ],
-                const SizedBox(height: 32),
-                if (status == SubmissionStatus.rejected) ...[
-                  FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => ChoreCameraScreen(assignment: assignment),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 132,
+                        height: 132,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colour.withValues(alpha: 0.14),
+                        ),
+                        child: Icon(icon, size: 76, color: colour),
                       ),
                     ),
-                    icon: const Icon(Icons.photo_camera_rounded),
-                    label: const Text('Take another photo'),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
-                  child: const Text('Back to my quests'),
+                    const SizedBox(height: 24),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(message, textAlign: TextAlign.center, style: text.titleMedium),
+                    if (current != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'You have ${formatMinutes(current.spendableMinutes)} of screen time.',
+                        textAlign: TextAlign.center,
+                        style: text.titleLarge?.copyWith(color: colour),
+                      ),
+                      if (current.earningBlocked)
+                        Text(
+                          "That's all the screen time you can earn for now.",
+                          textAlign: TextAlign.center,
+                          style: text.bodyMedium,
+                        ),
+                    ],
+                    const SizedBox(height: 32),
+                    if (status == SubmissionStatus.rejected) ...[
+                      FilledButton.icon(
+                        onPressed: () => Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => ChoreCameraScreen(assignment: assignment),
+                          ),
+                        ),
+                        icon: const Icon(Icons.photo_camera_rounded),
+                        label: const Text('Take another photo'),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
+                      child: const Text('Back to my quests'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
+          ),
+          // Over the page, never in the way of it: taps pass straight
+          // through to the buttons.
+          if (approved) const Positioned.fill(child: _Celebration()),
+        ],
+      ),
+    );
+  }
+}
+
+/// A short burst of confetti for an approved photo, and only for that.
+///
+/// Purely decorative: it takes no taps, says nothing to a screen reader, and
+/// holds nothing up, so the child can go straight back to their quests. It
+/// does not play at all for someone who has turned animations off.
+class _Celebration extends StatefulWidget {
+  const _Celebration();
+
+  @override
+  State<_Celebration> createState() => _CelebrationState();
+}
+
+class _CelebrationState extends State<_Celebration> {
+  final _controller = ConfettiController(
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || MediaQuery.of(context).disableAnimations) return;
+      _controller.play();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _controller,
+            blastDirectionality: BlastDirectionality.explosive,
+            emissionFrequency: 0.1,
+            numberOfParticles: 16,
+            minBlastForce: 8,
+            maxBlastForce: 28,
+            gravity: 0.3,
+            colors: const [
+              Color(0xFF2E7D32),
+              Color(0xFFFFC107),
+              Color(0xFF1E88E5),
+              Color(0xFFE91E63),
+              Color(0xFFFF7043),
+              Color(0xFF8E24AA),
+            ],
           ),
         ),
       ),

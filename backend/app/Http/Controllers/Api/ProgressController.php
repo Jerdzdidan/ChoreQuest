@@ -20,11 +20,13 @@ class ProgressController extends Controller
     public function mine(Request $request): JsonResponse
     {
         $child = $request->user();
+        $today = now()->toDateString();
 
         return response()->json([
-            // The server's date, which submissions count against.
-            'today' => now()->toDateString(),
+            // The server's date, which submissions and streaks count in.
+            'today' => $today,
             'xp' => $this->progress->xp($child),
+            'streak' => $this->progress->streak($child, $today),
         ]);
     }
 }

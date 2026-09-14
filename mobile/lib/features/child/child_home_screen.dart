@@ -333,6 +333,11 @@ class _ProgressCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (value != null)
+                  _StreakBadge(
+                    days: value.currentStreak,
+                    todayCounted: value.todayCounted,
+                  ),
               ],
             ),
             const SizedBox(height: 14),
@@ -345,6 +350,14 @@ class _ProgressCard extends StatelessWidget {
                 '${level.xpToNextLevel} XP to level ${level.level + 1}',
                 style: text.bodyMedium?.copyWith(color: _ink),
               ),
+              if (value.currentStreak > 0 && !value.todayCounted)
+                Text(
+                  'Finish a quest today to keep your streak going!',
+                  style: text.bodyMedium?.copyWith(
+                    color: _ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
             ] else
               ClipRRect(
                 borderRadius: BorderRadius.circular(7),
@@ -355,6 +368,57 @@ class _ProgressCard extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Days in a row with an approved quest, as a flame and a number. The flame
+/// is filled once today's quest is approved, and hollow while the streak is
+/// still waiting for today's.
+class _StreakBadge extends StatelessWidget {
+  const _StreakBadge({required this.days, required this.todayCounted});
+
+  final int days;
+  final bool todayCounted;
+
+  static const _flame = Color(0xFFD9480F);
+  static const _cold = Color(0xFF7D6A3C);
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final alive = days > 0;
+
+    return Semantics(
+      label: days == 1 ? 'Streak: 1 day in a row' : 'Streak: $days days in a row',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                alive && todayCounted
+                    ? Icons.local_fire_department
+                    : Icons.local_fire_department_outlined,
+                size: 34,
+                color: alive ? _flame : _cold,
+              ),
+              Text(
+                '$days',
+                style: text.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: _ProgressCard._ink,
+                ),
+              ),
+              Text(
+                days == 1 ? 'day' : 'days',
+                style: text.labelMedium?.copyWith(color: _ProgressCard._ink),
+              ),
+            ],
+          ),
         ),
       ),
     );

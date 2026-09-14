@@ -52,7 +52,7 @@ class WelcomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Chores first, then screen time.',
+                        'Quests first, then screen time.',
                         textAlign: TextAlign.center,
                         style: text.titleMedium,
                       ),

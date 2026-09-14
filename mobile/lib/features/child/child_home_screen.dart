@@ -229,7 +229,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
               ),
             ],
             const SizedBox(height: 20),
-            Text('Your chores today', style: text.titleLarge),
+            Text('Your quests today', style: text.titleLarge),
             const SizedBox(height: 8),
             AsyncView<TodayChores>(
               value: chores,
@@ -401,7 +401,7 @@ class _NothingToday extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'No chores today!',
+            'No quests today!',
             style: text.titleLarge,
             textAlign: TextAlign.center,
           ),

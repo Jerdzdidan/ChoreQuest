@@ -67,7 +67,7 @@ class SubmissionController extends Controller
 
         if ($alreadyDone) {
             throw ValidationException::withMessages([
-                'assignment_id' => ['You have already finished this chore today.'],
+                'assignment_id' => ['You have already finished this quest today.'],
             ]);
         }
 

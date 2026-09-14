@@ -257,7 +257,7 @@ class _CountdownScreenState extends State<CountdownScreen> {
               if (finished)
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Back to my chores'),
+                  child: const Text('Back to my quests'),
                 )
               else
                 OutlinedButton(

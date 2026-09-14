@@ -135,7 +135,7 @@ class SubmissionResultScreen extends ConsumerWidget {
                 OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
-                  child: const Text('Back to my chores'),
+                  child: const Text('Back to my quests'),
                 ),
               ],
             ),

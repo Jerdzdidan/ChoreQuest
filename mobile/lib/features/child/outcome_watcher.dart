@@ -45,7 +45,7 @@ AppNotification alertForOutcome(
   Submission s, {
   required SubmissionStatus before,
 }) {
-  final chore = s.choreName ?? 'your chore';
+  final chore = s.choreName ?? 'your quest';
   final (title, body) = switch (s.status) {
     SubmissionStatus.approved => (
         'Well done!',

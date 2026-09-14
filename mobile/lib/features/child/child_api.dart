@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../../core/models/api_dates.dart';
 import '../../core/models/balance.dart';
+import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 
@@ -66,6 +67,9 @@ class ChildApi {
   }
 
   Future<Balance> balance() async => Balance.fromJson(await _api.get('/my/balance'));
+
+  Future<ChildProgress> progress() async =>
+      ChildProgress.fromJson(await _api.get('/my/progress'));
 
   Future<ConsumeResult> consume(int minutes) async => ConsumeResult.fromJson(
         await _api.post('/my/consume', body: {'minutes': minutes}),

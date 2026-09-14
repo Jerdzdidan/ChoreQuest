@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ChildAuthController;
 use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\ChoreTemplateController;
 use App\Http\Controllers\Api\LedgerController;
+use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubmissionController;
 use Illuminate\Support\Facades\Route;
@@ -93,4 +94,7 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
     Route::get('/my/submissions', [SubmissionController::class, 'mine']);
     Route::get('/my/balance', [LedgerController::class, 'balance']);
     Route::post('/my/consume', [LedgerController::class, 'consume']);
+
+    // XP and the rest of the game layer, derived from approvals.
+    Route::get('/my/progress', [ProgressController::class, 'mine']);
 });

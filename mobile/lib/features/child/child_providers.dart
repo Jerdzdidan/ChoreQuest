@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/models/balance.dart';
+import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../core/session/session_controller.dart';
@@ -30,6 +31,10 @@ final balanceProvider = FutureProvider.autoDispose<Balance>(
 
 final mySubmissionsProvider = FutureProvider.autoDispose<List<Submission>>(
   (ref) => ref.watch(childApiProvider).mySubmissions(),
+);
+
+final progressProvider = FutureProvider.autoDispose<ChildProgress>(
+  (ref) => ref.watch(childApiProvider).progress(),
 );
 
 /// Kept for the app's lifetime, so a tester's chosen stand-in outcome survives
@@ -66,6 +71,7 @@ void refreshChildData(WidgetRef ref) {
   ref.invalidate(todayChoresProvider);
   ref.invalidate(balanceProvider);
   ref.invalidate(mySubmissionsProvider);
+  ref.invalidate(progressProvider);
   ref.invalidate(pendingUploadsProvider);
 }
 

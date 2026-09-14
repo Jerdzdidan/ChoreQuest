@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/balance.dart';
+import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../core/notifications/local_notifier.dart';
@@ -185,6 +186,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     final chores = ref.watch(todayChoresProvider);
     final submissions = ref.watch(mySubmissionsProvider);
     final balance = ref.watch(balanceProvider);
+    final progress = ref.watch(progressProvider);
     final saved = ref.watch(pendingUploadsProvider(me.id));
     final unsent =
         saved.hasValue ? saved.requireValue : const <PendingUpload>[];
@@ -193,15 +195,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: Row(
-          children: [
-            AvatarBadge(me.avatar, size: 40),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text('Hi, ${me.name}!', overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
+        title: Text('Hi, ${me.name}!', overflow: TextOverflow.ellipsis),
         actions: [
           TextButton.icon(
             onPressed: () => ref.read(sessionProvider.notifier).signOut(),
@@ -219,6 +213,8 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
+            _ProgressCard(avatar: me.avatar, progress: progress),
+            const SizedBox(height: 12),
             _ScreenTimeCard(balance: balance),
             if (unsent.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -261,6 +257,50 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
                   ],
                 );
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The child's avatar and how far they have come. Game progress only: the
+/// screen-time card below is what counts minutes.
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({required this.avatar, required this.progress});
+
+  final String avatar;
+  final AsyncValue<ChildProgress> progress;
+
+  static const _gold = Color(0xFFFFF1C2);
+  static const _ink = Color(0xFF6E5200);
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final value = progress.hasValue ? progress.requireValue : null;
+
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: _gold,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            AvatarBadge(avatar, size: 56),
+            const SizedBox(width: 14),
+            const Icon(Icons.star_rounded, size: 32, color: Color(0xFFE0A100)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                value == null ? '...' : '${value.xp} XP',
+                style: text.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: _ink,
+                ),
+              ),
             ),
           ],
         ),

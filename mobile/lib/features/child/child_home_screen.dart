@@ -16,6 +16,7 @@ import '../../core/uploads/pending_upload.dart';
 import '../../shared/async_view.dart';
 import '../../shared/avatars.dart';
 import '../../shared/format.dart';
+import '../../shared/leveling.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
@@ -280,6 +281,9 @@ class _ProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final value = progress.hasValue ? progress.requireValue : null;
+    // Worked out on every build, so the label changes the moment a refresh
+    // brings XP over a threshold.
+    final level = value == null ? null : levelFor(value.xp);
 
     return Card(
       elevation: 0,
@@ -291,15 +295,38 @@ class _ProgressCard extends StatelessWidget {
           children: [
             AvatarBadge(avatar, size: 56),
             const SizedBox(width: 14),
-            const Icon(Icons.star_rounded, size: 32, color: Color(0xFFE0A100)),
-            const SizedBox(width: 6),
             Expanded(
-              child: Text(
-                value == null ? '...' : '${value.xp} XP',
-                style: text.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: _ink,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    level == null ? 'Level ...' : 'Level ${level.level}',
+                    style: text.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 22,
+                        color: Color(0xFFE0A100),
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          value == null ? '...' : '${value.xp} XP',
+                          style: text.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: _ink,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

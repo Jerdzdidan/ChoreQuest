@@ -4,7 +4,9 @@ namespace App\Domain\Progress;
 
 use App\Domain\Verification\Decision;
 use App\Models\Child;
+use DateTimeImmutable;
 use DateTimeInterface;
+use DateTimeZone;
 
 /**
  * A child's game progress, derived on every read from submissions that
@@ -52,6 +54,36 @@ class ProgressService
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * XP earned on each of the last $days days, up to and including $today,
+     * oldest first. Days with none are listed with 0, so a chart can draw
+     * every day.
+     *
+     * @return list<array{date: string, xp: int}>
+     */
+    public function history(Child $child, string $today, int $days = 14): array
+    {
+        $end = new DateTimeImmutable($today, new DateTimeZone('UTC'));
+        $start = $end->modify('-'.($days - 1).' days');
+
+        $counts = $child->submissions()
+            ->toBase()
+            ->where('status', Decision::APPROVED)
+            ->whereBetween('for_date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->selectRaw('for_date, COUNT(*) AS xp')
+            ->groupBy('for_date')
+            ->pluck('xp', 'for_date');
+
+        $history = [];
+
+        for ($day = $start; $day <= $end; $day = $day->modify('+1 day')) {
+            $date = $day->format('Y-m-d');
+            $history[] = ['date' => $date, 'xp' => (int) ($counts[$date] ?? 0)];
+        }
+
+        return $history;
     }
 
     public function longestStreak(Child $child): int

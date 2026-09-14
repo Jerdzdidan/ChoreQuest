@@ -3,6 +3,7 @@
 namespace App\Domain\Progress;
 
 use App\Models\Child;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -22,6 +23,17 @@ class BadgeService
 
     public const QUESTS_25 = 'quests_25';
 
+    /**
+     * What each badge measures and how much of it earns the badge, in the
+     * order the app shows them. The only place these numbers live: the app
+     * receives each badge's target with the child's progress towards it.
+     */
+    public const GOALS = [
+        self::FIRST_QUEST => ['measure' => 'quests', 'target' => 1],
+        self::STREAK_7 => ['measure' => 'streak', 'target' => 7],
+        self::QUESTS_25 => ['measure' => 'quests', 'target' => 25],
+    ];
+
     public function __construct(private readonly ProgressService $progress)
     {
     }
@@ -36,19 +48,48 @@ class BadgeService
     {
         $badges = [];
 
-        if ($approvedQuests >= 1) {
-            $badges[] = self::FIRST_QUEST;
-        }
-
-        if ($longestStreak >= 7) {
-            $badges[] = self::STREAK_7;
-        }
-
-        if ($approvedQuests >= 25) {
-            $badges[] = self::QUESTS_25;
+        foreach (self::GOALS as $key => $goal) {
+            if (self::measured($goal, $approvedQuests, $longestStreak) >= $goal['target']) {
+                $badges[] = $key;
+            }
         }
 
         return $badges;
+    }
+
+    /**
+     * Every badge in the set, earned or not, with how far the child is
+     * towards it, for the Quest Log.
+     *
+     * @return list<array{key: string, earned_at: ?string, progress: int, target: int}>
+     */
+    public function statusFor(Child $child, int $approvedQuests, int $longestStreak): array
+    {
+        $earned = $child->badges()->pluck('earned_at', 'badge_key');
+
+        $status = [];
+
+        foreach (self::GOALS as $key => $goal) {
+            $earnedAt = $earned[$key] ?? null;
+
+            $status[] = [
+                'key' => $key,
+                'earned_at' => $earnedAt === null ? null : Carbon::parse($earnedAt)->toIso8601String(),
+                // Capped at the target, so a finished bar never overflows.
+                'progress' => min(self::measured($goal, $approvedQuests, $longestStreak), $goal['target']),
+                'target' => $goal['target'],
+            ];
+        }
+
+        return $status;
+    }
+
+    /**
+     * @param  array{measure: string, target: int}  $goal
+     */
+    private static function measured(array $goal, int $approvedQuests, int $longestStreak): int
+    {
+        return $goal['measure'] === 'streak' ? $longestStreak : $approvedQuests;
     }
 
     /**

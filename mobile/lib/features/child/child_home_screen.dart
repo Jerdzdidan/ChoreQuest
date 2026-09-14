@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/balance.dart';
-import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../core/notifications/local_notifier.dart';
@@ -14,15 +13,14 @@ import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/uploads/pending_upload.dart';
 import '../../shared/async_view.dart';
-import '../../shared/avatars.dart';
 import '../../shared/format.dart';
-import '../../shared/leveling.dart';
-import '../../shared/xp_bar.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
 import 'chore_card.dart';
 import 'outcome_watcher.dart';
+import 'progress_card.dart';
+import 'quest_log_screen.dart';
 import 'screen_time_sheet.dart';
 import 'upload_sync.dart';
 
@@ -168,6 +166,12 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     }
   }
 
+  void _openQuestLog() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const QuestLogScreen()),
+    );
+  }
+
   Future<void> _openCamera(Assignment assignment) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -215,7 +219,11 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            _ProgressCard(avatar: me.avatar, progress: progress),
+            ProgressCard(
+              avatar: me.avatar,
+              progress: progress,
+              onTap: _openQuestLog,
+            ),
             const SizedBox(height: 12),
             _ScreenTimeCard(balance: balance),
             if (unsent.isNotEmpty) ...[
@@ -261,164 +269,6 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
               },
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The child's avatar and how far they have come. Game progress only: the
-/// screen-time card below is what counts minutes.
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.avatar, required this.progress});
-
-  final String avatar;
-  final AsyncValue<ChildProgress> progress;
-
-  static const _gold = Color(0xFFFFF1C2);
-  static const _ink = Color(0xFF6E5200);
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final value = progress.hasValue ? progress.requireValue : null;
-    // Worked out on every build, so the label changes the moment a refresh
-    // brings XP over a threshold.
-    final level = value == null ? null : levelFor(value.xp);
-
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      color: _gold,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                AvatarBadge(avatar, size: 56),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        level == null ? 'Level ...' : 'Level ${level.level}',
-                        style: text.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: _ink,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 22,
-                            color: Color(0xFFE0A100),
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              value == null ? '...' : '${value.xp} XP',
-                              style: text.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: _ink,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (value != null)
-                  _StreakBadge(
-                    days: value.currentStreak,
-                    todayCounted: value.todayCounted,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            // Built only once XP has loaded, so opening the screen does not
-            // play a level-up from zero.
-            if (value != null && level != null) ...[
-              XpBar(xp: value.xp, backgroundColor: Colors.white),
-              const SizedBox(height: 6),
-              Text(
-                '${level.xpToNextLevel} XP to level ${level.level + 1}',
-                style: text.bodyMedium?.copyWith(color: _ink),
-              ),
-              if (value.currentStreak > 0 && !value.todayCounted)
-                Text(
-                  'Finish a quest today to keep your streak going!',
-                  style: text.bodyMedium?.copyWith(
-                    color: _ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-            ] else
-              ClipRRect(
-                borderRadius: BorderRadius.circular(7),
-                child: const LinearProgressIndicator(
-                  value: 0,
-                  minHeight: 14,
-                  backgroundColor: Colors.white,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Days in a row with an approved quest, as a flame and a number. The flame
-/// is filled once today's quest is approved, and hollow while the streak is
-/// still waiting for today's.
-class _StreakBadge extends StatelessWidget {
-  const _StreakBadge({required this.days, required this.todayCounted});
-
-  final int days;
-  final bool todayCounted;
-
-  static const _flame = Color(0xFFD9480F);
-  static const _cold = Color(0xFF7D6A3C);
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final alive = days > 0;
-
-    return Semantics(
-      label: days == 1 ? 'Streak: 1 day in a row' : 'Streak: $days days in a row',
-      child: ExcludeSemantics(
-        child: Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                alive && todayCounted
-                    ? Icons.local_fire_department
-                    : Icons.local_fire_department_outlined,
-                size: 34,
-                color: alive ? _flame : _cold,
-              ),
-              Text(
-                '$days',
-                style: text.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: _ProgressCard._ink,
-                ),
-              ),
-              Text(
-                days == 1 ? 'day' : 'days',
-                style: text.labelMedium?.copyWith(color: _ProgressCard._ink),
-              ),
-            ],
-          ),
         ),
       ),
     );

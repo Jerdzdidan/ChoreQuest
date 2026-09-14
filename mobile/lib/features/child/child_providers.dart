@@ -10,6 +10,7 @@ import '../../core/session/session_controller.dart';
 import '../../core/uploads/pending_upload.dart';
 import '../../core/uploads/upload_queue.dart';
 import '../../core/verification/chore_verifier.dart';
+import '../auth/household_api.dart';
 import 'child_api.dart';
 import 'upload_sync.dart';
 
@@ -35,6 +36,13 @@ final mySubmissionsProvider = FutureProvider.autoDispose<List<Submission>>(
 
 final progressProvider = FutureProvider.autoDispose<ChildProgress>(
   (ref) => ref.watch(childApiProvider).progress(),
+);
+
+/// The household's children as the sign-in screen shows them, so a child
+/// choosing an animal can see which ones a brother or sister has.
+final householdRosterProvider =
+    FutureProvider.autoDispose.family<HouseholdRoster, String>(
+  (ref, code) => fetchHouseholdRoster(ref.watch(apiClientProvider), code),
 );
 
 /// Kept for the app's lifetime, so a tester's chosen stand-in outcome survives

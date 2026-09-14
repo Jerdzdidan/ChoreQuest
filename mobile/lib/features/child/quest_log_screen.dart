@@ -9,6 +9,7 @@ import '../../shared/badges.dart';
 import '../../shared/day_bars.dart';
 import '../../shared/stat_tile.dart';
 import 'child_providers.dart';
+import 'choose_avatar_screen.dart';
 import 'progress_card.dart';
 
 /// A child's record of their quests: level and XP, their streak, the badges
@@ -38,6 +39,15 @@ class QuestLogScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             ProgressCard(avatar: me.avatar, progress: progress),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ChooseAvatarScreen()),
+              ),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
+              icon: const Icon(Icons.pets_rounded),
+              label: const Text('Change my animal'),
+            ),
             const SizedBox(height: 24),
             AsyncView<ChildProgress>(
               value: progress,

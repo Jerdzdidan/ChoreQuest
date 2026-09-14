@@ -95,6 +95,16 @@ class SessionController extends AsyncNotifier<Session> {
     await _endSession();
   }
 
+  /// The signed-in child changed their own profile, and the server has
+  /// already saved it. Keeps the same token, so nothing else changes.
+  Future<void> adoptChildProfile(Map<String, dynamic> child) async {
+    final current = state;
+    if (current is! AsyncData<Session>) return;
+    final session = current.value;
+    if (session is! ChildSession) return;
+    await _adopt(session.withProfile(child));
+  }
+
   Future<void> _adopt(Session session) async {
     await _store.writeSession(session);
     state = AsyncData(session);

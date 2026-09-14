@@ -163,6 +163,7 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
               const SizedBox(height: 12),
               _AvatarChooser(
                 selected: _avatar,
+                current: existing?.avatar,
                 onSelected:
                     _busy ? null : (key) => setState(() => _avatar = key),
               ),
@@ -285,10 +286,22 @@ class _BirthdayField extends StatelessWidget {
   }
 }
 
+/// The animals a grown-up can give a child.
+///
+/// Animals with a lock are earned by the child: they unlock at a level and
+/// the child picks them from their quest log, so a grown-up cannot hand
+/// one out. A child who already has one keeps it.
 class _AvatarChooser extends StatelessWidget {
-  const _AvatarChooser({required this.selected, required this.onSelected});
+  const _AvatarChooser({
+    required this.selected,
+    required this.current,
+    required this.onSelected,
+  });
 
   final String selected;
+
+  /// The child's saved animal when editing, which stays pickable.
+  final String? current;
   final ValueChanged<String>? onSelected;
 
   @override
@@ -296,31 +309,87 @@ class _AvatarChooser extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final select = onSelected;
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+    final anyLocked =
+        avatars.keys.any((key) => !canPickAvatar(key, level: 1, current: current));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final key in avatars.keys)
-          Semantics(
-            button: true,
-            selected: key == selected,
-            label: key,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: select == null ? null : () => select(key),
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: key == selected ? scheme.primary : Colors.transparent,
-                    width: 3,
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final key in avatars.keys)
+              if (canPickAvatar(key, level: 1, current: current))
+                Semantics(
+                  button: true,
+                  selected: key == selected,
+                  label: avatarName(key),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: select == null ? null : () => select(key),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: key == selected
+                              ? scheme.primary
+                              : Colors.transparent,
+                          width: 3,
+                        ),
+                      ),
+                      child: AvatarBadge(key, size: 52),
+                    ),
+                  ),
+                )
+              else
+                Semantics(
+                  label: '${avatarName(key)}, locked. Your child unlocks it at '
+                      'level ${avatarFor(key).unlockLevel}.',
+                  child: ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Stack(
+                        children: [
+                          Opacity(
+                            opacity: 0.4,
+                            child: AvatarBadge(key, size: 52),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: scheme.inverseSurface,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.lock_rounded,
+                                size: 14,
+                                color: scheme.onInverseSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                child: AvatarBadge(key, size: 52),
-              ),
-            ),
+          ],
+        ),
+        if (anyLocked) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Animals with a lock are unlocked by doing quests. Your child can '
+            'pick one from their quest log once they reach its level.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
           ),
+        ],
       ],
     );
   }

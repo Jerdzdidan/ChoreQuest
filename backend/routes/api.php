@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ChildAuthController;
 use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\ChoreTemplateController;
 use App\Http\Controllers\Api\LedgerController;
+use App\Http\Controllers\Api\MyAvatarController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubmissionController;
@@ -97,4 +98,7 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
 
     // XP and the rest of the game layer, derived from approvals.
     Route::get('/my/progress', [ProgressController::class, 'mine']);
+
+    // A child choosing their own animal from those their level unlocks.
+    Route::patch('/my/avatar', [MyAvatarController::class, 'update']);
 });

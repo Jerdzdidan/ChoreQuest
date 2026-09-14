@@ -71,6 +71,14 @@ class ChildApi {
   Future<ChildProgress> progress() async =>
       ChildProgress.fromJson(await _api.get('/my/progress'));
 
+  /// Changes the signed-in child's own animal and returns their profile as
+  /// the server saved it. Refused with a field error on `avatar` when a
+  /// brother or sister already has that one.
+  Future<Map<String, dynamic>> changeAvatar(String avatar) async {
+    final body = await _api.patch('/my/avatar', body: {'avatar': avatar});
+    return body['child'] as Map<String, dynamic>;
+  }
+
   Future<ConsumeResult> consume(int minutes) async => ConsumeResult.fromJson(
         await _api.post('/my/consume', body: {'minutes': minutes}),
       );

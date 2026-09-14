@@ -17,6 +17,7 @@ import '../../shared/async_view.dart';
 import '../../shared/avatars.dart';
 import '../../shared/format.dart';
 import '../../shared/leveling.dart';
+import '../../shared/xp_bar.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
@@ -291,44 +292,68 @@ class _ProgressCard extends StatelessWidget {
       color: _gold,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AvatarBadge(avatar, size: 56),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    level == null ? 'Level ...' : 'Level ${level.level}',
-                    style: text.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: _ink,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
+            Row(
+              children: [
+                AvatarBadge(avatar, size: 56),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 22,
-                        color: Color(0xFFE0A100),
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          value == null ? '...' : '${value.xp} XP',
-                          style: text.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: _ink,
-                          ),
+                      Text(
+                        level == null ? 'Level ...' : 'Level ${level.level}',
+                        style: text.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: _ink,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 22,
+                            color: Color(0xFFE0A100),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              value == null ? '...' : '${value.xp} XP',
+                              style: text.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _ink,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            const SizedBox(height: 14),
+            // Built only once XP has loaded, so opening the screen does not
+            // play a level-up from zero.
+            if (value != null && level != null) ...[
+              XpBar(xp: value.xp, backgroundColor: Colors.white),
+              const SizedBox(height: 6),
+              Text(
+                '${level.xpToNextLevel} XP to level ${level.level + 1}',
+                style: text.bodyMedium?.copyWith(color: _ink),
+              ),
+            ] else
+              ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: const LinearProgressIndicator(
+                  value: 0,
+                  minHeight: 14,
+                  backgroundColor: Colors.white,
+                ),
+              ),
           ],
         ),
       ),

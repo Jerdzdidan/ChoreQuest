@@ -59,6 +59,11 @@ class Child extends Model
         return $this->hasMany(Submission::class);
     }
 
+    public function badges(): HasMany
+    {
+        return $this->hasMany(BadgeEarned::class);
+    }
+
     /**
      * Every child has a rule. One is created with defaults on first access so
      * no code path downstream has to cope with its absence.

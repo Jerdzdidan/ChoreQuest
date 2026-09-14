@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Allocation\LedgerService;
+use App\Domain\Progress\BadgeService;
 use App\Domain\Verification\Decision;
 use App\Http\Controllers\Controller;
+use App\Models\Child;
 use App\Models\Submission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +23,10 @@ use Illuminate\Support\Facades\Storage;
  */
 class ReviewController extends Controller
 {
-    public function __construct(private readonly LedgerService $ledger)
-    {
+    public function __construct(
+        private readonly LedgerService $ledger,
+        private readonly BadgeService $badges,
+    ) {
     }
 
     /**
@@ -90,6 +94,17 @@ class ReviewController extends Controller
             // compensating entry rather than deleting the original.
             if ($approving) {
                 $this->ledger->credit($submission);
+
+                // Checked once the decision has committed, so a badge is never
+                // awarded for an approval that did not stick.
+                $childId = $submission->child_id;
+                DB::afterCommit(function () use ($childId) {
+                    $child = Child::find($childId);
+
+                    if ($child) {
+                        $this->badges->awardAfterApproval($child);
+                    }
+                });
             } else {
                 $this->ledger->reverse($submission);
             }

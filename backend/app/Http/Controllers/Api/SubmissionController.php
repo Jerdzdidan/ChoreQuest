@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Allocation\LedgerService;
+use App\Domain\Progress\BadgeService;
 use App\Domain\Verification\ConfidenceRouter;
 use App\Domain\Verification\Decision;
 use App\Http\Controllers\Controller;
@@ -21,6 +22,7 @@ class SubmissionController extends Controller
     public function __construct(
         private readonly ConfidenceRouter $router,
         private readonly LedgerService $ledger,
+        private readonly BadgeService $badges,
     ) {
     }
 
@@ -101,6 +103,7 @@ class SubmissionController extends Controller
         if ($submission->isApproved()) {
             $submission->setRelation('assignment', $assignment);
             $this->ledger->credit($submission);
+            $this->badges->awardAfterApproval($child);
         }
 
         return response()->json(['submission' => $this->payload($submission)], 201);

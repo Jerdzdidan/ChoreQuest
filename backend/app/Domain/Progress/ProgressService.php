@@ -54,6 +54,11 @@ class ProgressService
             ->all();
     }
 
+    public function longestStreak(Child $child): int
+    {
+        return $this->streaks->longest($this->approvedDays($child));
+    }
+
     /**
      * @return array{current: int, best: int, today_counted: bool}
      */

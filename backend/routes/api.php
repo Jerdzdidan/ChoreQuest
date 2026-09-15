@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\ChoreTemplateController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\MyAvatarController;
+use App\Http\Controllers\Api\MyCosmeticsController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubmissionController;
@@ -101,4 +102,9 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
 
     // A child choosing their own animal from those their level unlocks.
     Route::patch('/my/avatar', [MyAvatarController::class, 'update']);
+
+    // Cosmetics: what a child has unlocked. The app reports what its level
+    // unlocks; the server records each item once.
+    Route::get('/my/cosmetics', [MyCosmeticsController::class, 'index']);
+    Route::post('/my/cosmetics', [MyCosmeticsController::class, 'store']);
 });

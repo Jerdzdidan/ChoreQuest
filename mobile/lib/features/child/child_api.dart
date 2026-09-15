@@ -5,6 +5,7 @@ import '../../core/models/api_dates.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
+import '../../core/models/cosmetics.dart';
 import '../../core/models/submission.dart';
 
 class TodayChores {
@@ -70,6 +71,27 @@ class ChildApi {
 
   Future<ChildProgress> progress() async =>
       ChildProgress.fromJson(await _api.get('/my/progress'));
+
+  /// Everything the child has unlocked.
+  Future<Wardrobe> cosmetics() async =>
+      Wardrobe.fromJson(await _api.get('/my/cosmetics'));
+
+  /// Reports cosmetics the child's level has unlocked. Items the server
+  /// already holds are left as they are.
+  Future<Wardrobe> recordUnlocked(
+    List<(CosmeticCategory, String)> items,
+  ) async =>
+      Wardrobe.fromJson(
+        await _api.post(
+          '/my/cosmetics',
+          body: {
+            'items': [
+              for (final (category, key) in items)
+                {'category': category.name, 'key': key},
+            ],
+          },
+        ),
+      );
 
   /// Changes the signed-in child's own animal and returns their profile as
   /// the server saved it. Refused with a field error on `avatar` when a

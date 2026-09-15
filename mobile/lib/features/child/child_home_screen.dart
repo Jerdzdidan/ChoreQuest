@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/balance.dart';
+import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../core/notifications/local_notifier.dart';
@@ -14,10 +15,12 @@ import '../../core/session/session_controller.dart';
 import '../../core/uploads/pending_upload.dart';
 import '../../shared/async_view.dart';
 import '../../shared/format.dart';
+import '../../shared/leveling.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
 import 'chore_card.dart';
+import 'cosmetic_unlocks.dart';
 import 'outcome_watcher.dart';
 import 'progress_card.dart';
 import 'quest_log_screen.dart';
@@ -37,6 +40,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
   Timer? _poll;
   Timer? _away;
   late final OutcomeWatcher _outcomes;
+  late final CosmeticUnlocks _unlocks;
 
   /// Who this screen belongs to, fixed when it opens. The whole app is rebuilt
   /// when someone else signs in, so it never changes underneath the screen.
@@ -52,6 +56,18 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     _outcomes = OutcomeWatcher(
       api: ref.read(childApiProvider),
       notifier: notifier,
+    );
+    _unlocks = CosmeticUnlocks(ref.read(childApiProvider));
+    // Whenever a refresh brings XP, record what the child's level unlocks.
+    // A level already recorded costs nothing.
+    ref.listenManual<AsyncValue<ChildProgress>>(
+      progressProvider,
+      (previous, next) {
+        if (next.hasValue) {
+          unawaited(_recordUnlocks(levelFor(next.requireValue.xp).level));
+        }
+      },
+      fireImmediately: true,
     );
     final me = switch (ref.read(sessionProvider)) {
       AsyncData(value: final ChildSession session) => session,
@@ -151,6 +167,14 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       // The list of saved photos could not be read; nothing to send until it
       // can be.
       return 0;
+    }
+  }
+
+  Future<void> _recordUnlocks(int level) async {
+    try {
+      await _unlocks.sync(level);
+    } on ApiException {
+      // Offline or a server fault. The next refresh tries again.
     }
   }
 

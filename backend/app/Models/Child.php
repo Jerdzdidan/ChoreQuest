@@ -64,6 +64,11 @@ class Child extends Model
         return $this->hasMany(BadgeEarned::class);
     }
 
+    public function cosmetics(): HasMany
+    {
+        return $this->hasMany(ChildCosmetic::class);
+    }
+
     /**
      * Every child has a rule. One is created with defaults on first access so
      * no code path downstream has to cope with its absence.

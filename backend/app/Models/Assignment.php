@@ -12,9 +12,15 @@ class Assignment extends Model
 {
     use HasFactory;
 
+    /**
+     * The places on a child's quest map. A chore with no particular place
+     * is "other", which the map shows as its own group.
+     */
+    public const LOCATIONS = ['kitchen', 'bedroom', 'study', 'outdoor', 'other'];
+
     protected $fillable = [
         'child_id', 'chore_template_id', 'points',
-        'due_time', 'recurrence', 'scheduled_date', 'is_active',
+        'due_time', 'recurrence', 'scheduled_date', 'is_active', 'location',
     ];
 
     protected function casts(): array

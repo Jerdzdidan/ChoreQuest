@@ -29,9 +29,9 @@ class CataloguePickerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalogue = ref.watch(catalogueProvider(child.id));
     final assignments = ref.watch(assignmentsProvider(child.id));
-    final assignedTemplateIds = assignments.hasValue
-        ? {for (final a in assignments.requireValue) a.chore.id}
-        : <int>{};
+    final assignedLocations = assignments.hasValue
+        ? {for (final a in assignments.requireValue) a.chore.id: a.location}
+        : <int, QuestLocation>{};
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -57,8 +57,7 @@ class CataloguePickerScreen extends ConsumerWidget {
                       for (final template in list)
                         _TemplateTile(
                           template: template,
-                          alreadyAssigned:
-                              assignedTemplateIds.contains(template.id),
+                          assignedAt: assignedLocations[template.id],
                           onTap: () => _assign(context, template),
                         ),
                     ],
@@ -73,18 +72,21 @@ class CataloguePickerScreen extends ConsumerWidget {
 class _TemplateTile extends StatelessWidget {
   const _TemplateTile({
     required this.template,
-    required this.alreadyAssigned,
+    required this.assignedAt,
     required this.onTap,
   });
 
   final ChoreTemplate template;
-  final bool alreadyAssigned;
+
+  /// Where this chore is already assigned, or null when it is not.
+  final QuestLocation? assignedAt;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final place = assignedAt;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -120,9 +122,11 @@ class _TemplateTile extends StatelessWidget {
                             label: 'Checked automatically',
                             colour: scheme.primaryContainer,
                           ),
-                        if (alreadyAssigned)
+                        if (place != null)
                           _Tag(
-                            label: 'Already assigned',
+                            label: place == QuestLocation.other
+                                ? 'Already assigned'
+                                : 'Already assigned · ${place.label}',
                             colour: scheme.tertiaryContainer,
                           ),
                       ],

@@ -78,6 +78,7 @@ class ParentApi {
     ClockTime? dueTime,
     Recurrence recurrence = Recurrence.daily,
     DateTime? scheduledDate,
+    QuestLocation location = QuestLocation.other,
   }) async {
     final body = await _api.post(
       '/assignments',
@@ -89,6 +90,7 @@ class ParentApi {
         'recurrence': recurrence.name,
         if (recurrence == Recurrence.once && scheduledDate != null)
           'scheduled_date': isoDate(scheduledDate),
+        'location': location.name,
       },
     );
     return Assignment.fromJson(body['assignment'] as Map<String, dynamic>);
@@ -100,6 +102,7 @@ class ParentApi {
     ClockTime? dueTime,
     bool clearDueTime = false,
     bool? isActive,
+    QuestLocation? location,
   }) async {
     final body = await _api.patch(
       '/assignments/$assignmentId',
@@ -110,6 +113,7 @@ class ParentApi {
         else if (clearDueTime)
           'due_time': null,
         'is_active': ?isActive,
+        'location': ?location?.name,
       },
     );
     return Assignment.fromJson(body['assignment'] as Map<String, dynamic>);

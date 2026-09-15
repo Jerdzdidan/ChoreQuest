@@ -131,6 +131,7 @@ class _AssignmentTile extends ConsumerWidget {
         'One day',
       if (due != null)
         'by ${localizations.formatTimeOfDay(TimeOfDay(hour: due.hour, minute: due.minute))}',
+      if (assignment.location != QuestLocation.other) assignment.location.label,
     ].join(' · ');
 
     return Card(

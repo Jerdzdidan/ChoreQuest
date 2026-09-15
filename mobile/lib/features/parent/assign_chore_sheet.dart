@@ -8,6 +8,7 @@ import '../../core/models/chore.dart';
 import '../../shared/chore_icons.dart';
 import '../../shared/format.dart';
 import '../../shared/inline_error.dart';
+import '../../shared/quest_places.dart';
 import 'parent_providers.dart';
 
 /// Assign a chore, or change one already assigned. Pops `true` on success.
@@ -33,6 +34,8 @@ class AssignChoreSheet extends ConsumerStatefulWidget {
 class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
   late int _points = widget.existing?.points ?? widget.template.defaultPoints;
   late ClockTime? _due = widget.existing?.dueTime;
+  late QuestLocation _location =
+      widget.existing?.location ?? widget.template.suggestedLocation;
   Recurrence _recurrence = Recurrence.daily;
   DateTime? _date;
 
@@ -91,6 +94,7 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
           points: _points,
           dueTime: _due,
           clearDueTime: _due == null,
+          location: _location,
         ),
       );
     }
@@ -108,6 +112,7 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
         dueTime: _due,
         recurrence: _recurrence,
         scheduledDate: _date,
+        location: _location,
       ),
     );
   }
@@ -215,6 +220,30 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
                       onPressed: _busy ? null : () => setState(() => _due = null),
                     ),
               onTap: _busy ? null : _pickTime,
+            ),
+            const SizedBox(height: 8),
+            Text('Where', style: text.titleSmall),
+            const SizedBox(height: 2),
+            Text(
+              "Groups the quest on your child's quest map.",
+              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final place in QuestLocation.values)
+                  ChoiceChip(
+                    showCheckmark: false,
+                    avatar: Icon(iconForLocation(place), size: 18),
+                    label: Text(place.label),
+                    selected: _location == place,
+                    onSelected: _busy
+                        ? null
+                        : (_) => setState(() => _location = place),
+                  ),
+              ],
             ),
             if (!_editing) ...[
               const SizedBox(height: 8),

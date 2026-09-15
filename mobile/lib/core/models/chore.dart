@@ -41,6 +41,43 @@ class ChoreTemplate {
   /// Whether the photo checker can judge this chore at all. Only the three
   /// trained classes can; every other chore always goes to a parent.
   final bool modelVerifiable;
+
+  /// Where this chore usually happens, offered first when a grown-up
+  /// assigns it. Only a suggestion: the grown-up picks the place, and can
+  /// change it later.
+  QuestLocation get suggestedLocation => switch ((category, icon)) {
+        ('kitchen', _) => QuestLocation.kitchen,
+        ('bedroom', _) || (_, 'wardrobe') => QuestLocation.bedroom,
+        (_, 'books') => QuestLocation.study,
+        (_, 'plant' || 'laundry' || 'trash') => QuestLocation.outdoor,
+        _ => QuestLocation.other,
+      };
+}
+
+/// Where in the home a quest happens: the places on a child's quest map.
+enum QuestLocation {
+  kitchen,
+  bedroom,
+  study,
+  outdoor,
+  other;
+
+  /// A place this version of the app does not know reads as [other], so a
+  /// quest is never lost from the map.
+  static QuestLocation parse(String? raw) {
+    for (final location in values) {
+      if (location.name == raw) return location;
+    }
+    return other;
+  }
+
+  String get label => switch (this) {
+        kitchen => 'Kitchen',
+        bedroom => 'Bedroom',
+        study => 'Study table',
+        outdoor => 'Outdoor area',
+        other => 'Other',
+      };
 }
 
 enum Recurrence {
@@ -61,6 +98,7 @@ class Assignment {
     required this.scheduledDate,
     required this.isActive,
     required this.chore,
+    this.location = QuestLocation.other,
   });
 
   factory Assignment.fromJson(Map<String, dynamic> json) {
@@ -74,6 +112,7 @@ class Assignment {
       scheduledDate: scheduled == null ? null : parseApiDate(scheduled),
       isActive: json['is_active'] as bool? ?? true,
       chore: ChoreTemplate.fromJson(json['chore'] as Map<String, dynamic>),
+      location: QuestLocation.parse(json['location'] as String?),
     );
   }
 
@@ -85,4 +124,7 @@ class Assignment {
   final DateTime? scheduledDate;
   final bool isActive;
   final ChoreTemplate chore;
+
+  /// Where in the home it happens, as the parent set it.
+  final QuestLocation location;
 }

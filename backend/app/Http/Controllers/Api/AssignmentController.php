@@ -8,6 +8,7 @@ use App\Models\Child;
 use App\Models\ChoreTemplate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AssignmentController extends Controller
@@ -35,6 +36,7 @@ class AssignmentController extends Controller
             'due_time' => ['nullable', 'date_format:H:i'],
             'recurrence' => ['sometimes', 'in:daily,once'],
             'scheduled_date' => ['nullable', 'date'],
+            'location' => ['sometimes', 'string', Rule::in(Assignment::LOCATIONS)],
         ]);
 
         $child = $request->user()->children()->find($data['child_id']);
@@ -68,6 +70,9 @@ class AssignmentController extends Controller
             'due_time' => $data['due_time'] ?? null,
             'recurrence' => $recurrence,
             'scheduled_date' => $recurrence === 'once' ? $data['scheduled_date'] : null,
+            // Where in the home it happens, chosen by the parent. Without one,
+            // the quest is grouped under "other" on the child's map.
+            'location' => $data['location'] ?? 'other',
         ]);
 
         return response()->json(['assignment' => $this->payload($assignment->load('template'))], 201);
@@ -81,6 +86,7 @@ class AssignmentController extends Controller
             'points' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'due_time' => ['nullable', 'date_format:H:i'],
             'is_active' => ['sometimes', 'boolean'],
+            'location' => ['sometimes', 'string', Rule::in(Assignment::LOCATIONS)],
         ]);
 
         $assignment->update($data);
@@ -134,6 +140,7 @@ class AssignmentController extends Controller
             'recurrence' => $a->recurrence,
             'scheduled_date' => $a->scheduled_date?->toDateString(),
             'is_active' => $a->is_active,
+            'location' => $a->location,
             'chore' => ChoreTemplateController::payloadFor($a->template),
         ];
     }

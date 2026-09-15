@@ -56,6 +56,40 @@ class CosmeticService
     }
 
     /**
+     * Puts on one item the child owns, taking off whatever else was on in
+     * that category. Returns false, changing nothing, when the child has
+     * not unlocked that item in that category.
+     */
+    public function equip(Child $child, string $category, string $key): bool
+    {
+        return DB::transaction(function () use ($child, $category, $key) {
+            // One change at a time per child, so taps on two phones cannot
+            // leave two items on in the same category.
+            Child::whereKey($child->id)->lockForUpdate()->firstOrFail();
+
+            $item = $child->cosmetics()
+                ->where('category', $category)
+                ->where('item_key', $key)
+                ->first();
+
+            if (! $item) {
+                return false;
+            }
+
+            $child->cosmetics()
+                ->where('category', $category)
+                ->whereKeyNot($item->id)
+                ->update(['equipped' => false]);
+
+            if (! $item->equipped) {
+                $item->update(['equipped' => true]);
+            }
+
+            return true;
+        });
+    }
+
+    /**
      * Everything the child has unlocked, oldest first.
      *
      * @return list<array{category: string, key: string, unlocked_at: string, equipped: bool}>

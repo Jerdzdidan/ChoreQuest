@@ -107,4 +107,6 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
     // unlocks; the server records each item once.
     Route::get('/my/cosmetics', [MyCosmeticsController::class, 'index']);
     Route::post('/my/cosmetics', [MyCosmeticsController::class, 'store']);
+    // Put on one item the child owns: one per category at a time.
+    Route::patch('/my/cosmetics', [MyCosmeticsController::class, 'update']);
 });

@@ -93,6 +93,17 @@ class ChildApi {
         ),
       );
 
+  /// Puts on an item the child owns, taking off whatever else was on in that
+  /// category. Refused with a field error on `key` when the child has not
+  /// unlocked it.
+  Future<Wardrobe> equip(CosmeticCategory category, String key) async =>
+      Wardrobe.fromJson(
+        await _api.patch(
+          '/my/cosmetics',
+          body: {'category': category.name, 'key': key},
+        ),
+      );
+
   /// Changes the signed-in child's own animal and returns their profile as
   /// the server saved it. Refused with a field error on `avatar` when a
   /// brother or sister already has that one.

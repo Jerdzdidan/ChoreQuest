@@ -42,6 +42,16 @@ class ChoreTemplate {
   /// trained classes can; every other chore always goes to a parent.
   final bool modelVerifiable;
 
+  /// How hard the chore is, read from the catalogue's age tiers: ages 4 and
+  /// 5 tidy up, 6 and 7 take on routine upkeep, 8 and up handle water, food
+  /// and the outdoors. No new data: the youngest age a chore suits is the
+  /// best measure of its effort the catalogue already holds.
+  QuestDifficulty get difficulty => minAge <= 5
+      ? QuestDifficulty.easy
+      : minAge <= 7
+          ? QuestDifficulty.medium
+          : QuestDifficulty.hard;
+
   /// Where this chore usually happens, offered first when a grown-up
   /// assigns it. Only a suggestion: the grown-up picks the place, and can
   /// change it later.
@@ -51,6 +61,18 @@ class ChoreTemplate {
         (_, 'books') => QuestLocation.study,
         (_, 'plant' || 'laundry' || 'trash') => QuestLocation.outdoor,
         _ => QuestLocation.other,
+      };
+}
+
+enum QuestDifficulty {
+  easy,
+  medium,
+  hard;
+
+  String get label => switch (this) {
+        easy => 'Easy',
+        medium => 'Medium',
+        hard => 'Hard',
       };
 }
 

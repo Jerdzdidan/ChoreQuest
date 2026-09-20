@@ -109,15 +109,17 @@ class AssignmentController extends Controller
     public function today(Request $request): JsonResponse
     {
         $child = $request->user();
+        // Today where the household lives, not on the server's UTC clock.
+        $now = $child->localNow();
 
         $assignments = $child->assignments()
-            ->dueOn(now())
+            ->dueOn($now)
             ->with('template')
             ->orderByRaw('due_time IS NULL, due_time')
             ->get();
 
         return response()->json([
-            'date' => now()->toDateString(),
+            'date' => $now->toDateString(),
             'chores' => $assignments->map(fn (Assignment $a) => $this->payload($a))->all(),
         ]);
     }

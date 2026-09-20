@@ -158,7 +158,7 @@ class LedgerService
                 'child_id' => $locked->id,
                 'entry_type' => LedgerEntry::CONSUMED,
                 'minutes' => -$take,
-                'for_date' => now()->toDateString(),
+                'for_date' => $locked->localNow()->toDateString(),
                 'note' => $note,
             ]);
         });

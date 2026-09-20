@@ -23,7 +23,8 @@ class LedgerController extends Controller
     {
         $child = $request->user();
         $rule = $child->rule();
-        $today = now();
+        // The household's date: its day and week are the ones the limits count.
+        $today = $child->localNow();
 
         $earnedToday = $this->ledger->earnedOn($child, $today);
         $earnedThisWeek = $this->ledger->earnedInWeekOf($child, $today);
@@ -75,12 +76,12 @@ class LedgerController extends Controller
             ->get();
 
         $rule = $child->rule();
-        $today = now();
+        $today = $child->localNow();
 
         return response()->json([
             'child' => ['id' => $child->id, 'name' => $child->name],
-            // The server's today, which is what for_date and the daily limit
-            // are counted in. A phone's own date can differ from it.
+            // The household's today (its own timezone), which for_date and
+            // the daily limit are counted in.
             'today' => $today->toDateString(),
             'balance_minutes' => $this->ledger->balance($child),
             'earned_today' => $this->ledger->earnedOn($child, $today),

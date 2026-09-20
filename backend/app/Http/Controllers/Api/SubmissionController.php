@@ -56,7 +56,9 @@ class SubmissionController extends Controller
         $assignment = $child->assignments()->with('template')->find($data['assignment_id']);
         abort_unless($assignment, 404);
 
-        $today = now()->toDateString();
+        // The household's own date, so a photo sent at 11:50pm counts for that
+        // day and one at 12:10am for the next, whatever UTC says (TZ3).
+        $today = $child->localNow()->toDateString();
 
         // One approved submission per chore per day. Retrying after a
         // rejection is allowed and expected; earning twice for the same chore

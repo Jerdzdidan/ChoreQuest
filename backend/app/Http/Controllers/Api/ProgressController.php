@@ -23,13 +23,13 @@ class ProgressController extends Controller
     public function mine(Request $request): JsonResponse
     {
         $child = $request->user();
-        $today = now()->toDateString();
+        $today = $child->localNow()->toDateString();
         $xp = $this->progress->xp($child);
         $quests = $this->progress->questCount($child);
         $streak = $this->progress->streak($child, $today);
 
         return response()->json([
-            // The server's date, which submissions and streaks count in.
+            // The household's date, which submissions and streaks count in.
             'today' => $today,
             'xp' => $xp,
             // Approved quests, whatever their difficulty; badges count these.

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\MyCosmeticsController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubmissionController;
+use App\Http\Controllers\Api\TimezoneController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json([
@@ -43,6 +44,8 @@ Route::post('/child/login', [ChildAuthController::class, 'login'])
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    // The phone's timezone, sent at sign-in; days are counted in it.
+    Route::patch('/me/timezone', [TimezoneController::class, 'update']);
 });
 
 /*

@@ -5,14 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../notifications/local_notifier.dart';
+import 'device_timezone.dart';
 import 'session.dart';
 import 'session_store.dart';
+import 'timezone_reporter.dart';
 
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
 final apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(readToken: ref.watch(sessionStoreProvider).readToken),
 );
+
+/// How the phone's timezone is read. Replaceable, since tests have no
+/// platform to ask.
+final readTimezoneProvider = Provider<ReadTimezone>((ref) => readDeviceTimezone);
 
 final sessionProvider =
     AsyncNotifierProvider<SessionController, Session>(SessionController.new);
@@ -49,6 +55,7 @@ class SessionController extends AsyncNotifier<Session> {
       body: {'email': email, 'password': password},
     );
     await _adopt(ParentSession.fromAuthResponse(body));
+    unawaited(_reportTimezone());
   }
 
   Future<void> registerParent({
@@ -66,6 +73,7 @@ class SessionController extends AsyncNotifier<Session> {
       },
     );
     await _adopt(ParentSession.fromAuthResponse(body));
+    unawaited(_reportTimezone());
   }
 
   Future<void> signInChild({
@@ -81,6 +89,7 @@ class SessionController extends AsyncNotifier<Session> {
     await _adopt(
       ChildSession.fromAuthResponse(body, householdCode: householdCode),
     );
+    unawaited(_reportTimezone());
   }
 
   /// Revoking the token on the server is best effort. Signing out on the
@@ -103,6 +112,16 @@ class SessionController extends AsyncNotifier<Session> {
     final session = current.value;
     if (session is! ChildSession) return;
     await _adopt(session.withProfile(child));
+  }
+
+  /// Best effort: a household whose timezone cannot be read or sent keeps
+  /// the one it has.
+  Future<void> _reportTimezone() async {
+    if (!ref.mounted) return;
+    await TimezoneReporter(
+      api: _api,
+      readTimezone: ref.read(readTimezoneProvider),
+    ).report();
   }
 
   Future<void> _adopt(Session session) async {
@@ -140,6 +159,7 @@ class SessionController extends AsyncNotifier<Session> {
       }
 
       await _adopt(refreshed);
+      unawaited(_reportTimezone());
     } on ApiUnauthorised {
       // Revoked server-side, for instance a parent removed this child's
       // profile. Only a definite "not authorised" signs the device out.

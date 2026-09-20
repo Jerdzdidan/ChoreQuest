@@ -13,6 +13,7 @@ class ChoreTemplate {
     required this.defaultPoints,
     required this.hasVisibleEndState,
     required this.modelVerifiable,
+    this.difficulty = QuestDifficulty.easy,
   });
 
   factory ChoreTemplate.fromJson(Map<String, dynamic> json) => ChoreTemplate(
@@ -26,6 +27,7 @@ class ChoreTemplate {
         defaultPoints: json['default_points'] as int,
         hasVisibleEndState: json['has_visible_end_state'] as bool? ?? false,
         modelVerifiable: json['model_verifiable'] as bool? ?? false,
+        difficulty: QuestDifficulty.parse(json['difficulty'] as String?),
       );
 
   final int id;
@@ -42,15 +44,9 @@ class ChoreTemplate {
   /// trained classes can; every other chore always goes to a parent.
   final bool modelVerifiable;
 
-  /// How hard the chore is, read from the catalogue's age tiers: ages 4 and
-  /// 5 tidy up, 6 and 7 take on routine upkeep, 8 and up handle water, food
-  /// and the outdoors. No new data: the youngest age a chore suits is the
-  /// best measure of its effort the catalogue already holds.
-  QuestDifficulty get difficulty => minAge <= 5
-      ? QuestDifficulty.easy
-      : minAge <= 7
-          ? QuestDifficulty.medium
-          : QuestDifficulty.hard;
+  /// How hard the chore is, as the catalogue says. Its XP follows from this
+  /// (difficulty_xp.dart).
+  final QuestDifficulty difficulty;
 
   /// Where this chore usually happens, offered first when a grown-up
   /// assigns it. Only a suggestion: the grown-up picks the place, and can
@@ -68,6 +64,15 @@ enum QuestDifficulty {
   easy,
   medium,
   hard;
+
+  /// A tier this version of the app does not know reads as [easy], the
+  /// smallest reward, rather than failing to show the quest.
+  static QuestDifficulty parse(String? raw) {
+    for (final difficulty in values) {
+      if (difficulty.name == raw) return difficulty;
+    }
+    return easy;
+  }
 
   String get label => switch (this) {
         easy => 'Easy',

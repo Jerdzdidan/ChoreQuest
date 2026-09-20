@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/chore.dart';
 import '../../shared/chore_icons.dart';
 import '../../shared/format.dart';
-import '../../shared/leveling.dart';
+import '../../shared/difficulty_xp.dart';
 import 'child_providers.dart';
 
 /// One quest, as a mission card: its picture and name, what it is worth in
@@ -36,6 +36,7 @@ class ChoreCard extends StatelessWidget {
     final perPoint = minutesPerPoint;
     final due = assignment.dueTime;
     final difficulty = chore.difficulty;
+    final tier = difficultyStyleFor(difficulty);
 
     final (statusLabel, statusIcon, statusColour) = switch (state) {
       ChoreState.toDo => ('Take a photo', Icons.photo_camera_rounded, scheme.primary),
@@ -56,24 +57,6 @@ class ChoreCard extends StatelessWidget {
     // would only reach a grown-up twice.
     final tappable = state != ChoreState.done && state != ChoreState.queued;
     final done = state == ChoreState.done;
-
-    final (difficultyIcon, difficultyBackground, difficultyInk) = switch (difficulty) {
-      QuestDifficulty.easy => (
-          Icons.signal_cellular_alt_1_bar,
-          const Color(0xFFD9F0CB),
-          const Color(0xFF2B6320),
-        ),
-      QuestDifficulty.medium => (
-          Icons.signal_cellular_alt_2_bar,
-          const Color(0xFFFFE9B8),
-          const Color(0xFF6E4A00),
-        ),
-      QuestDifficulty.hard => (
-          Icons.signal_cellular_alt,
-          const Color(0xFFFFE3CC),
-          const Color(0xFF833F12),
-        ),
-    };
 
     return MergeSemantics(
       child: Card(
@@ -112,9 +95,9 @@ class ChoreCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          const _Pill(
+                          _Pill(
                             icon: Icons.star_rounded,
-                            label: '+$xpPerApprovedQuest XP',
+                            label: '+${tier.xp} XP',
                             background: Color(0xFFFFF1C2),
                             ink: Color(0xFF6E5200),
                           ),
@@ -127,10 +110,10 @@ class ChoreCard extends StatelessWidget {
                             ink: const Color(0xFF1D4A73),
                           ),
                           _Pill(
-                            icon: difficultyIcon,
+                            icon: tier.icon,
                             label: difficulty.label,
-                            background: difficultyBackground,
-                            ink: difficultyInk,
+                            background: tier.background,
+                            ink: tier.ink,
                           ),
                           if (due != null)
                             _Pill(

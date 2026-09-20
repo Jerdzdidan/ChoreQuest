@@ -5,11 +5,6 @@
 /// no imports, so the same rules can be checked outside the app.
 library;
 
-/// XP a child earns for each approved quest. The server counts it
-/// (ProgressService::xp in the backend); this copy is only for showing a
-/// quest's reward before it is earned.
-const xpPerApprovedQuest = 1;
-
 /// XP it takes to go up one level.
 ///
 /// A quest earns 5, 10 or 20 XP by difficulty (difficulty_xp.dart), about 10

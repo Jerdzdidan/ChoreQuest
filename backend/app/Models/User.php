@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'household_code',
+        'timezone',
     ];
 
     protected $hidden = [
@@ -35,6 +37,20 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * The household's timezone. Days (a quest's date, streaks, the daily and
+     * weekly limits) are counted in it.
+     */
+    public const DEFAULT_TIMEZONE = 'Asia/Manila';
+
+    /**
+     * The time now where this household lives.
+     */
+    public function localNow(): Carbon
+    {
+        return Carbon::now($this->timezone ?: self::DEFAULT_TIMEZONE);
     }
 
     public function children(): HasMany

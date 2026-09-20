@@ -44,6 +44,16 @@ class Child extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * The time now in this child's household. Every "today" for a child
+     * (a quest's date, streaks, today's quests, the daily and weekly limits)
+     * is taken from here, not from the server's UTC clock.
+     */
+    public function localNow(): Carbon
+    {
+        return $this->parent?->localNow() ?? Carbon::now(User::DEFAULT_TIMEZONE);
+    }
+
     public function allocationRule(): HasOne
     {
         return $this->hasOne(AllocationRule::class);

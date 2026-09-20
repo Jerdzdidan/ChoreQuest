@@ -11,7 +11,11 @@ library;
 const xpPerApprovedQuest = 1;
 
 /// XP it takes to go up one level.
-const xpPerLevel = 10;
+///
+/// A quest earns 5, 10 or 20 XP by difficulty (difficulty_xp.dart), about 10
+/// on average, so a level takes roughly ten quests: the same pace as when every
+/// quest earned 1 XP and a level took 10.
+const xpPerLevel = 100;
 
 /// The total XP a child needs to reach [level]. Level 1 needs none.
 ///

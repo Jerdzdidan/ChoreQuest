@@ -25,14 +25,17 @@ class ProgressController extends Controller
         $child = $request->user();
         $today = now()->toDateString();
         $xp = $this->progress->xp($child);
+        $quests = $this->progress->questCount($child);
         $streak = $this->progress->streak($child, $today);
 
         return response()->json([
             // The server's date, which submissions and streaks count in.
             'today' => $today,
             'xp' => $xp,
+            // Approved quests, whatever their difficulty; badges count these.
+            'quests' => $quests,
             'streak' => $streak,
-            'badges' => $this->badges->statusFor($child, $xp, $streak['best']),
+            'badges' => $this->badges->statusFor($child, $quests, $streak['best']),
             'history' => $this->progress->history($child, $today),
         ]);
     }

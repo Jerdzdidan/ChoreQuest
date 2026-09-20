@@ -7,14 +7,17 @@ use App\Models\Child;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A child's game progress, derived on every read from submissions that
  * already exist.
  *
- * Nothing here is stored and nothing here touches screen time. XP is a count
- * of approved photos, not a balance: the ledger stays the only record of
- * minutes earned, so progress can never become a second source of truth.
+ * Nothing here is stored and nothing here touches screen time. XP is summed
+ * from approved photos, not kept as a balance: the ledger stays the only
+ * record of minutes earned, so progress can never become a second source of
+ * truth.
  */
 class ProgressService
 {
@@ -23,10 +26,25 @@ class ProgressService
     }
 
     /**
-     * One XP for every approved submission. Counted afresh each time, so a
-     * parent overturning an approval takes that XP back with it.
+     * The XP of every approved submission, each by its chore's difficulty
+     * (Difficulty::xp). Summed afresh on every read, so a parent overturning
+     * an approval takes that quest's XP back with it.
+     *
+     * A chore's difficulty is read as it is now, so re-tiering a catalogue
+     * chore re-prices past quests too. Nothing is stored to go stale.
      */
     public function xp(Child $child): int
+    {
+        return (int) $this->approvedWithDifficulty($child)
+            ->selectRaw($this->xpExpression().' AS xp')
+            ->value('xp');
+    }
+
+    /**
+     * How many quests have been approved, whatever their difficulty. Badges
+     * such as 25 quests count quests, not XP.
+     */
+    public function questCount(Child $child): int
     {
         return $child->submissions()
             ->where('status', Decision::APPROVED)
@@ -68,13 +86,12 @@ class ProgressService
         $end = new DateTimeImmutable($today, new DateTimeZone('UTC'));
         $start = $end->modify('-'.($days - 1).' days');
 
-        $counts = $child->submissions()
-            ->toBase()
-            ->where('status', Decision::APPROVED)
-            ->whereBetween('for_date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
-            ->selectRaw('for_date, COUNT(*) AS xp')
-            ->groupBy('for_date')
-            ->pluck('xp', 'for_date');
+        $counts = $this->approvedWithDifficulty($child)
+            ->whereBetween('submissions.for_date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->selectRaw('submissions.for_date AS day, '.$this->xpExpression().' AS xp')
+            ->groupBy('submissions.for_date')
+            ->pluck('xp', 'day')
+            ->mapWithKeys(fn ($xp, $day) => [substr((string) $day, 0, 10) => (int) $xp]);
 
         $history = [];
 
@@ -84,6 +101,31 @@ class ProgressService
         }
 
         return $history;
+    }
+
+    /**
+     * A child's approved submissions joined to their chore's difficulty.
+     */
+    private function approvedWithDifficulty(Child $child): Builder
+    {
+        return DB::table('submissions')
+            ->join('assignments', 'assignments.id', '=', 'submissions.assignment_id')
+            ->join('chore_templates', 'chore_templates.id', '=', 'assignments.chore_template_id')
+            ->where('submissions.child_id', $child->id)
+            ->where('submissions.status', Decision::APPROVED);
+    }
+
+    /**
+     * SUM of each row's difficulty XP, built from the Difficulty enum so the
+     * numbers are never repeated here.
+     */
+    private function xpExpression(): string
+    {
+        $whens = collect(Difficulty::cases())
+            ->map(fn (Difficulty $d) => "WHEN '{$d->value}' THEN {$d->xp()}")
+            ->implode(' ');
+
+        return "COALESCE(SUM(CASE chore_templates.difficulty {$whens} ELSE 0 END), 0)";
     }
 
     public function longestStreak(Child $child): int

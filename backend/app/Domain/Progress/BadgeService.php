@@ -104,7 +104,7 @@ class BadgeService
     public function awardFor(Child $child): array
     {
         $reached = self::reached(
-            $this->progress->xp($child),
+            $this->progress->questCount($child),
             $this->progress->longestStreak($child),
         );
 

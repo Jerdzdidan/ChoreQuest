@@ -40,6 +40,7 @@ class ChildProgress {
   const ChildProgress({
     required this.today,
     required this.xp,
+    this.quests = 0,
     this.currentStreak = 0,
     this.bestStreak = 0,
     this.todayCounted = false,
@@ -52,6 +53,7 @@ class ChildProgress {
     return ChildProgress(
       today: parseApiDate(json['today'] as String),
       xp: json['xp'] as int,
+      quests: json['quests'] as int? ?? 0,
       currentStreak: streak['current'] as int? ?? 0,
       bestStreak: streak['best'] as int? ?? 0,
       todayCounted: streak['today_counted'] as bool? ?? false,
@@ -71,9 +73,12 @@ class ChildProgress {
   /// The server's date, which submissions and streaks count in.
   final DateTime today;
 
-  /// One for every approved photo. Goes down again if a grown-up changes an
-  /// approval to not done.
+  /// The XP of every approved quest, by its difficulty. Goes down again if a
+  /// grown-up changes an approval to not done.
   final int xp;
+
+  /// How many quests have been approved, whatever their difficulty.
+  final int quests;
 
   /// Days in a row with at least one approved quest, up to today. A streak
   /// that reached yesterday still counts while today is not over.

@@ -127,7 +127,7 @@ client is at `C:\xampp\mysql\bin\mysql.exe` and is not on PATH.
 
 ```
 cd backend
-php artisan serve --host 0.0.0.0 --port 8000
+php artisan serve --host 0.0.0.0
 ```
 
 `--host 0.0.0.0` matters for the emulator and for a phone on Wi-Fi: the default
@@ -135,14 +135,14 @@ binds to 127.0.0.1 only. It is not needed with `adb reverse`, below.
 
 ```
 cd mobile
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8001/api
 ```
 
 Inside an Android emulator, `10.0.2.2` is the host machine. `localhost` is the
 emulator itself.
 
-On a real phone over USB, prefer `adb reverse tcp:8000 tcp:8000` with
-`API_BASE_URL=http://127.0.0.1:8000/api`. The phone's port 8000 is carried over
+On a real phone over USB, prefer `adb reverse tcp:8001 tcp:8001` with
+`API_BASE_URL=http://127.0.0.1:8001/api`. The phone's port 8001 is carried over
 the cable, so no firewall rule is involved. That matters on this machine: its
 Wi-Fi uses the Public network profile, where Windows Firewall blocks inbound
 connections, so reaching the PC's LAN address from a phone needs an admin to

@@ -44,6 +44,7 @@ const _categoryColours = <String, (Color, Color)>{
   'kitchen': (Color(0xFFFFE3CC), Color(0xFF833F12)),
   'cleaning': (Color(0xFFD6E7F5), Color(0xFF1D4A73)),
   'laundry': (Color(0xFFF7DEE9), Color(0xFF822B52)),
+  'study': (Color(0xFFD5F0EC), Color(0xFF0F5E56)),
 };
 
 class ChoreIcon extends StatelessWidget {

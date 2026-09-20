@@ -35,7 +35,7 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
   late int _points = widget.existing?.points ?? widget.template.defaultPoints;
   late ClockTime? _due = widget.existing?.dueTime;
   late QuestLocation _location =
-      widget.existing?.location ?? widget.template.suggestedLocation;
+      widget.existing?.location ?? widget.template.location;
   Recurrence _recurrence = Recurrence.daily;
   DateTime? _date;
 

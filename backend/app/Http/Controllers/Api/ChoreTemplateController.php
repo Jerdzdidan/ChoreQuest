@@ -37,6 +37,8 @@ class ChoreTemplateController extends Controller
             'description' => $t->description,
             'icon' => $t->icon,
             'category' => $t->category,
+            // Where it usually happens; offered first when a parent assigns it.
+            'location' => $t->location,
             'min_age' => $t->min_age,
             'max_age' => $t->max_age,
             'default_points' => $t->default_points,

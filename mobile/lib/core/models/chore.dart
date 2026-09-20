@@ -14,6 +14,7 @@ class ChoreTemplate {
     required this.hasVisibleEndState,
     required this.modelVerifiable,
     this.difficulty = QuestDifficulty.easy,
+    this.location = QuestLocation.other,
   });
 
   factory ChoreTemplate.fromJson(Map<String, dynamic> json) => ChoreTemplate(
@@ -28,6 +29,7 @@ class ChoreTemplate {
         hasVisibleEndState: json['has_visible_end_state'] as bool? ?? false,
         modelVerifiable: json['model_verifiable'] as bool? ?? false,
         difficulty: QuestDifficulty.parse(json['difficulty'] as String?),
+        location: QuestLocation.parse(json['location'] as String?),
       );
 
   final int id;
@@ -48,16 +50,10 @@ class ChoreTemplate {
   /// (difficulty_xp.dart).
   final QuestDifficulty difficulty;
 
-  /// Where this chore usually happens, offered first when a grown-up
-  /// assigns it. Only a suggestion: the grown-up picks the place, and can
-  /// change it later.
-  QuestLocation get suggestedLocation => switch ((category, icon)) {
-        ('kitchen', _) => QuestLocation.kitchen,
-        ('bedroom', _) || (_, 'wardrobe') => QuestLocation.bedroom,
-        (_, 'books') => QuestLocation.study,
-        (_, 'plant' || 'laundry' || 'trash') => QuestLocation.outdoor,
-        _ => QuestLocation.other,
-      };
+  /// Where in a home this chore usually happens, as the catalogue says.
+  /// Offered first when a grown-up assigns it; the assignment's own
+  /// location is what the quest map uses.
+  final QuestLocation location;
 }
 
 enum QuestDifficulty {

@@ -12,7 +12,7 @@ class ChoreTemplate extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'description', 'icon', 'category',
+        'name', 'description', 'icon', 'category', 'location',
         'min_age', 'max_age', 'default_points', 'difficulty',
         'has_visible_end_state', 'verification_class',
     ];

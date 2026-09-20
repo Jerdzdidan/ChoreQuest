@@ -39,11 +39,18 @@ class ChoreTemplate extends Model
     }
 
     /**
-     * True only when a trained class exists for this chore. Everything else
-     * reaches the parent regardless of how photographable it is.
+     * Whether the photo checker may judge this chore at all. Both must hold:
+     *
+     * - has_visible_end_state: one photograph can show the chore finished.
+     *   This is the manuscript's own scoping flag (Limitation 2); a chore
+     *   without it, such as reading for ten minutes, always goes to a
+     *   parent, whatever a model says, now or once the real one (C4) runs.
+     * - verification_class: a trained class exists for it.
+     *
+     * Everything else reaches the parent for review.
      */
     public function isModelVerifiable(): bool
     {
-        return $this->verification_class !== null;
+        return $this->has_visible_end_state && $this->verification_class !== null;
     }
 }

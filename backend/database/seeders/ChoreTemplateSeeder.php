@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Progress\Difficulty;
 use App\Models\ChoreTemplate;
 use Illuminate\Database\Seeder;
 
@@ -84,6 +85,7 @@ class ChoreTemplateSeeder extends Seeder
             'min_age' => $minAge,
             'max_age' => $maxAge,
             'default_points' => $points,
+            'difficulty' => Difficulty::fromPoints($points)->value,
             'has_visible_end_state' => $visibleEndState,
             'verification_class' => $verificationClass,
         ];

@@ -40,6 +40,7 @@ class ChoreTemplateController extends Controller
             'min_age' => $t->min_age,
             'max_age' => $t->max_age,
             'default_points' => $t->default_points,
+            'difficulty' => $t->difficulty->value,
             'has_visible_end_state' => $t->has_visible_end_state,
             'model_verifiable' => $t->isModelVerifiable(),
         ];

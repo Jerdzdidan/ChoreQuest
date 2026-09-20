@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Progress\Difficulty;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ class ChoreTemplate extends Model
 
     protected $fillable = [
         'name', 'description', 'icon', 'category',
-        'min_age', 'max_age', 'default_points',
+        'min_age', 'max_age', 'default_points', 'difficulty',
         'has_visible_end_state', 'verification_class',
     ];
 
@@ -23,6 +24,7 @@ class ChoreTemplate extends Model
             'min_age' => 'integer',
             'max_age' => 'integer',
             'default_points' => 'integer',
+            'difficulty' => Difficulty::class,
         ];
     }
 

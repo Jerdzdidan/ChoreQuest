@@ -15,6 +15,7 @@ import '../../shared/async_view.dart';
 import '../../shared/format.dart';
 import '../../shared/leveling.dart';
 import '../../shared/theme.dart';
+import 'avatar_screen.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'cosmetic_unlocks.dart';
@@ -24,11 +25,17 @@ import 'progress_card.dart';
 import 'quest_list.dart';
 import 'quest_log_screen.dart';
 import 'quest_map.dart';
+import 'reward_track_screen.dart';
 import 'screen_time_sheet.dart';
 import 'upload_sync.dart';
 
-/// The child's home: their progress and screen time, and the quest map of
-/// today's quests, one stop for each place in the home (U10).
+/// The child's side of the app, in four tabs (N1): Map, with their progress,
+/// their screen time and the quest map of today's quests (U10); Quests, every
+/// quest in one list; Avatar (U8); and Rewards, the Reward Track (T2, RW1).
+///
+/// Also where the child's app keeps in touch, whichever tab is open: it
+/// checks for a grown-up's decisions, sends saved photos and records what the
+/// child's level unlocks.
 class ChildHomeScreen extends ConsumerStatefulWidget {
   const ChildHomeScreen({super.key});
 
@@ -48,6 +55,13 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
   ChildSession? _me;
   UploadSync? _uploads;
   bool _sendingSaved = false;
+
+  var _tab = 0;
+
+  /// Tabs opened at least once. The rest are built when first opened, so a
+  /// low-end phone does not load four screens at start-up. Once built, a tab
+  /// stays built and keeps its scroll position.
+  final _opened = <int>{0};
 
   @override
   void initState() {
@@ -203,6 +217,11 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     );
   }
 
+  void _select(int tab) => setState(() {
+        _tab = tab;
+        _opened.add(tab);
+      });
+
   @override
   Widget build(BuildContext context) {
     final me = switch (ref.watch(sessionProvider)) {
@@ -211,17 +230,17 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     };
     if (me == null) return const SizedBox.shrink();
 
-    final chores = ref.watch(todayChoresProvider);
-    final states = QuestStates.watch(ref, me.id);
-    final balance = ref.watch(balanceProvider);
-    final progress = ref.watch(progressProvider);
-    final unsent = states.saved;
-    final text = Theme.of(context).textTheme;
+    final title = switch (_tab) {
+      1 => 'Quests',
+      2 => 'My Avatar',
+      3 => 'Rewards',
+      _ => 'Hi, ${me.name}!',
+    };
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: Text('Hi, ${me.name}!', overflow: TextOverflow.ellipsis),
+        title: Text(title, overflow: TextOverflow.ellipsis),
         actions: [
           TextButton.icon(
             onPressed: () => ref.read(sessionProvider.notifier).signOut(),
@@ -230,51 +249,125 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          refreshChildData(ref);
-          await _sendSaved();
-          await ref.read(todayChoresProvider.future);
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            ProgressCard(
-              avatar: me.avatar,
-              progress: progress,
-              onTap: _openQuestLog,
-            ),
+      body: IndexedStack(
+        index: _tab,
+        children: [
+          _mapTab(me),
+          if (_opened.contains(1)) const _QuestsTab() else const SizedBox.shrink(),
+          if (_opened.contains(2)) const AvatarScreen(showAppBar: false) else const SizedBox.shrink(),
+          if (_opened.contains(3)) const RewardTrackScreen(showAppBar: false) else const SizedBox.shrink(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: _select,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map_rounded),
+            label: 'Map',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.flag_outlined),
+            selectedIcon: Icon(Icons.flag_rounded),
+            label: 'Quests',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.face_outlined),
+            selectedIcon: Icon(Icons.face_rounded),
+            label: 'Avatar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.card_giftcard_outlined),
+            selectedIcon: Icon(Icons.card_giftcard_rounded),
+            label: 'Rewards',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The Map tab: progress and screen time, then the quest map (U10).
+  Widget _mapTab(ChildSession me) {
+    final chores = ref.watch(todayChoresProvider);
+    final states = QuestStates.watch(ref, me.id);
+    final balance = ref.watch(balanceProvider);
+    final progress = ref.watch(progressProvider);
+    final unsent = states.saved;
+    final text = Theme.of(context).textTheme;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        refreshChildData(ref);
+        await _sendSaved();
+        await ref.read(todayChoresProvider.future);
+      },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          ProgressCard(
+            avatar: me.avatar,
+            progress: progress,
+            onTap: _openQuestLog,
+          ),
+          const SizedBox(height: 12),
+          _ScreenTimeCard(balance: balance),
+          if (unsent.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _ScreenTimeCard(balance: balance),
-            if (unsent.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _SavedPhotosCard(
-                count: unsent.length,
-                sending: _sendingSaved,
-                onSend: _sendNow,
-              ),
-            ],
-            const SizedBox(height: 20),
-            Text('Your quest map', style: text.titleLarge),
-            const SizedBox(height: 8),
-            AsyncView<TodayChores>(
-              value: chores,
-              onRetry: () => refreshChildData(ref),
-              builder: (context, today) {
-                if (today.chores.isEmpty) {
-                  return const NothingToday('No quests today!');
-                }
-                return QuestMap(
-                  tallies: tallyByPlace(
-                    today.chores,
-                    (assignment) => states.of(assignment, today.date),
-                  ),
-                  onOpen: _openPlace,
-                );
-              },
+            _SavedPhotosCard(
+              count: unsent.length,
+              sending: _sendingSaved,
+              onSend: _sendNow,
             ),
           ],
-        ),
+          const SizedBox(height: 20),
+          Text('Your quest map', style: text.titleLarge),
+          const SizedBox(height: 8),
+          AsyncView<TodayChores>(
+            value: chores,
+            onRetry: () => refreshChildData(ref),
+            builder: (context, today) {
+              if (today.chores.isEmpty) {
+                return const NothingToday('No quests today!');
+              }
+              return QuestMap(
+                tallies: tallyByPlace(
+                  today.chores,
+                  (assignment) => states.of(assignment, today.date),
+                ),
+                onOpen: _openPlace,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The Quests tab: every quest today in one list, for a child who would
+/// rather see them all at once than place by place.
+class _QuestsTab extends ConsumerWidget {
+  const _QuestsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        refreshChildData(ref);
+        await ref.read(todayChoresProvider.future);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          Text(
+            'All your quests today',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          const QuestList(),
+        ],
       ),
     );
   }

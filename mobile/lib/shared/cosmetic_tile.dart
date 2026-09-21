@@ -42,6 +42,7 @@ class CosmeticTile extends StatelessWidget {
       button: !locked && !worn,
       selected: worn,
       enabled: !locked,
+      onTap: locked || worn || busy ? null : onTap,
       label: locked
           ? '${style.title}. Unlocks at level ${style.unlockLevel}.'
           : worn

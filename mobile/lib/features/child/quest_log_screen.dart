@@ -11,6 +11,7 @@ import 'badge_list.dart';
 import 'child_providers.dart';
 import 'choose_avatar_screen.dart';
 import 'progress_card.dart';
+import 'story_list.dart';
 
 /// A child's record of their quests: level and XP, their streak, the badges
 /// they have earned and those still to earn, and XP day by day.
@@ -105,6 +106,10 @@ class _Log extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         BadgeList(badges: p.badges),
+        const SizedBox(height: 14),
+        Text('Your story', style: text.titleMedium),
+        const SizedBox(height: 8),
+        StoryList(progress: p),
         const SizedBox(height: 14),
         Text('XP in the last two weeks', style: text.titleMedium),
         const SizedBox(height: 8),

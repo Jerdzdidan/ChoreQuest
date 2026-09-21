@@ -2,11 +2,13 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../shared/format.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
+import 'reward_callouts.dart';
 import 'submission_sender.dart';
 
 /// What happened to the photo, told gently.
@@ -18,10 +20,15 @@ class SubmissionResultScreen extends ConsumerWidget {
     super.key,
     required this.assignment,
     required this.outcome,
+    this.progressBefore,
   });
 
   final Assignment assignment;
   final SendOutcome outcome;
+
+  /// The child's progress just before the photo was sent, to tell what an
+  /// approval unlocked. Null when it had not loaded.
+  final ChildProgress? progressBefore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +83,7 @@ class SubmissionResultScreen extends ConsumerWidget {
         balance != null && balance.hasValue ? balance.requireValue : null;
 
     final approved = status == SubmissionStatus.approved;
+    final progressAfter = approved ? ref.watch(progressProvider).value : null;
 
     return Scaffold(
       body: Stack(
@@ -123,6 +131,14 @@ class SubmissionResultScreen extends ConsumerWidget {
                           textAlign: TextAlign.center,
                           style: text.bodyMedium,
                         ),
+                    ],
+                    if (approved) ...[
+                      const SizedBox(height: 20),
+                      RewardCallouts(
+                        difficulty: assignment.chore.difficulty,
+                        before: progressBefore,
+                        after: progressAfter,
+                      ),
                     ],
                     const SizedBox(height: 32),
                     if (status == SubmissionStatus.rejected) ...[

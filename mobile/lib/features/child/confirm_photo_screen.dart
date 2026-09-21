@@ -58,6 +58,9 @@ class _ConfirmPhotoScreenState extends ConsumerState<ConfirmPhotoScreen> {
     };
     if (me == null) return;
     setState(() => _sending = true);
+    // Where the child stood before this photo, so the result screen can
+    // tell what an approval just unlocked.
+    final progressBefore = ref.read(progressProvider).value;
 
     final verdict = await ref
         .read(choreVerifierProvider)
@@ -86,6 +89,7 @@ class _ConfirmPhotoScreenState extends ConsumerState<ConfirmPhotoScreen> {
         builder: (_) => SubmissionResultScreen(
           assignment: widget.assignment,
           outcome: outcome,
+          progressBefore: progressBefore,
         ),
       ),
     );

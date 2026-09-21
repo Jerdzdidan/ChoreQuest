@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ChoreTemplateController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\MyAvatarController;
 use App\Http\Controllers\Api\MyCosmeticsController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubmissionController;
@@ -83,6 +84,10 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
 
     // Screen-time report and running ledger for one child.
     Route::get('/children/{child}/report', [LedgerController::class, 'report']);
+
+    // One notification per photo sent, from the submissions themselves.
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/seen', [NotificationController::class, 'seen']);
 });
 
 /*

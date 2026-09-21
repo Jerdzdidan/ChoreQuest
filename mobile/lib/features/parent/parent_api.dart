@@ -3,6 +3,7 @@ import '../../core/models/allocation_rule.dart';
 import '../../core/models/api_dates.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/chore.dart';
+import '../../core/models/parent_notification.dart';
 import '../../core/models/screen_time_report.dart';
 import '../../core/models/submission.dart';
 
@@ -156,6 +157,14 @@ class ParentApi {
     );
     return Submission.fromJson(body['submission'] as Map<String, dynamic>);
   }
+
+  /// The latest 100 photos across the household as notifications, and how
+  /// many arrived since the list was last opened.
+  Future<NotificationFeed> notifications() async =>
+      NotificationFeed.fromJson(await _api.get('/notifications'));
+
+  /// The parent has opened the list: nothing so far is unread any more.
+  Future<void> markNotificationsSeen() => _api.post('/notifications/seen');
 
   /// One child's screen time: balance, limits, totals, and the latest 200
   /// ledger rows.

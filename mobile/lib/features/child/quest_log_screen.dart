@@ -10,7 +10,7 @@ import '../../shared/stat_tile.dart';
 import '../../shared/theme.dart';
 import 'badge_list.dart';
 import 'child_providers.dart';
-import 'choose_avatar_screen.dart';
+import 'avatar_screen.dart';
 import 'progress_card.dart';
 import 'story_list.dart';
 
@@ -44,11 +44,11 @@ class QuestLogScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ChooseAvatarScreen()),
+                MaterialPageRoute(builder: (_) => const AvatarScreen()),
               ),
               style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
-              icon: const Icon(Icons.pets_rounded),
-              label: const Text('Change my animal'),
+              icon: const Icon(Icons.face_retouching_natural_rounded),
+              label: const Text('My Avatar'),
             ),
             const SizedBox(height: 24),
             AsyncView<ChildProgress>(

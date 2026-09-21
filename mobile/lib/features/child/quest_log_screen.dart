@@ -12,6 +12,7 @@ import 'badge_list.dart';
 import 'child_providers.dart';
 import 'avatar_screen.dart';
 import 'progress_card.dart';
+import 'reward_track_screen.dart';
 import 'story_list.dart';
 
 /// A child's record of their quests: level and XP, their streak, the badges
@@ -49,6 +50,15 @@ class QuestLogScreen extends ConsumerWidget {
               style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
               icon: const Icon(Icons.face_retouching_natural_rounded),
               label: const Text('My Avatar'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RewardTrackScreen()),
+              ),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52)),
+              icon: const Icon(Icons.card_giftcard_rounded),
+              label: const Text('Reward track'),
             ),
             const SizedBox(height: 24),
             AsyncView<ChildProgress>(

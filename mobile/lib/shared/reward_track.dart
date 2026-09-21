@@ -45,18 +45,24 @@ String kindOf(CosmeticCategory category) => switch (category) {
       CosmeticCategory.plant => 'Plant',
     };
 
+/// The registry key for taking a hat or a pet off (headwear.dart, pets.dart):
+/// a choice every child has, not a reward.
+const _nothing = 'none';
+
 /// Every level-gated reward, merged from the registries and grouped by the
 /// level that unlocks it, lowest first: outfits, headwear, pets and room
 /// items (cosmetics.dart) and the animals that need a level (avatars.dart).
+/// Level 1 holds what every child starts with.
 ///
 /// Pure: it reads only the registries, so it needs no table and no request,
 /// and a new registry entry appears on the track by itself. Levels with
-/// nothing to unlock are left out.
+/// nothing to unlock are left out, and so are "No hat" and "No pet".
 List<TrackLevel> rewardTrack() {
   final byLevel = <int, List<TrackReward>>{};
 
   for (final category in CosmeticCategory.values) {
-    for (final style in cosmeticsIn(category).values) {
+    for (final MapEntry(:key, value: style) in cosmeticsIn(category).entries) {
+      if (key == _nothing) continue;
       byLevel.putIfAbsent(style.unlockLevel, () => []).add(
             TrackReward(
               title: style.title,
@@ -149,4 +155,97 @@ List<MilestoneReward> milestoneTrack(ChildProgress progress) {
     ...all.where((reward) => reward.earned),
     ...all.where((reward) => !reward.earned),
   ];
+}
+
+/// Something the child has earned, and when: one line of the "recently
+/// earned" strip (RW2).
+class RecentReward {
+  const RecentReward({
+    required this.title,
+    required this.kind,
+    required this.at,
+    required this.background,
+    this.ink,
+    this.icon,
+    this.emoji,
+    this.asset,
+  });
+
+  final String title;
+  final String kind;
+  final DateTime at;
+  final Color background;
+  final Color? ink;
+  final IconData? icon;
+  final String? emoji;
+  final String? asset;
+}
+
+/// The last few things the child earned, newest first: badges, the story
+/// chapters those badges opened, and cosmetics their level unlocked.
+///
+/// Read from what the server already records (when each badge was earned,
+/// when each cosmetic was unlocked) rather than from a feed of its own, so
+/// it can never disagree with them. Two things are left out because nothing
+/// dates them: chapters opened by a count of quests rather than a badge, and
+/// animals, which follow the level without being recorded. Starter items are
+/// left out too; every child has those from the first day. A brand-new child
+/// therefore gets an empty list.
+///
+/// Things earned in the same moment, such as a badge and the chapter it
+/// opened, or everything one level unlocked, keep the order they are
+/// gathered in: badges, then chapters, then cosmetics in registry order.
+List<RecentReward> recentlyEarned(ChildProgress progress, Wardrobe? wardrobe, {int limit = 3}) {
+  final earnedAt = <String, DateTime>{
+    for (final badge in progress.badges) badge.key: ?badge.earnedAt,
+  };
+
+  final earned = <RecentReward>[
+    for (final badge in progress.badges)
+      if (earnedAt[badge.key] case final at?)
+        RecentReward(
+          title: badgeStyleFor(badge.key).title,
+          kind: 'Badge',
+          at: at,
+          icon: badgeStyleFor(badge.key).icon,
+          background: badgeStyleFor(badge.key).background,
+          ink: badgeStyleFor(badge.key).ink,
+        ),
+    for (final chapter in storyChapters)
+      if (chapter.milestone case BadgeMilestone(:final badgeKey))
+        if (earnedAt[badgeKey] case final at?)
+          RecentReward(
+            title: 'Chapter ${chapter.number}: ${chapter.title}',
+            kind: 'Story',
+            at: at,
+            emoji: chapter.emoji,
+            background: chapter.background,
+            ink: chapter.ink,
+          ),
+    for (final category in CosmeticCategory.values)
+      for (final MapEntry(:key, value: style) in cosmeticsIn(category).entries)
+        if (style.unlockLevel > 1)
+          if (_unlockedAt(wardrobe, category, key) case final at?)
+            RecentReward(
+              title: style.title,
+              kind: kindOf(category),
+              at: at,
+              emoji: style.emoji,
+              asset: style.asset,
+              background: style.background,
+            ),
+  ];
+
+  final newestFirst = [...earned.indexed]..sort((a, b) {
+      final byTime = b.$2.at.compareTo(a.$2.at);
+      return byTime != 0 ? byTime : a.$1.compareTo(b.$1);
+    });
+  return [for (final (_, reward) in newestFirst.take(limit)) reward];
+}
+
+DateTime? _unlockedAt(Wardrobe? wardrobe, CosmeticCategory category, String key) {
+  for (final item in wardrobe?.items ?? const <OwnedCosmetic>[]) {
+    if (item.category == category && item.key == key) return item.unlockedAt;
+  }
+  return null;
 }

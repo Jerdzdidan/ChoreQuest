@@ -6,6 +6,7 @@ import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../shared/avatars.dart';
 import '../../shared/inline_error.dart';
+import 'child_form_screen.dart';
 import 'parent_providers.dart';
 
 /// The parent's own account: their picture, name, email and password.
@@ -251,6 +252,56 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
               ),
             ],
           ),
+        ),
+        const Divider(height: 40),
+        Text('Your children', style: text.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          'Open a child to change their name, picture, birthday or PIN. '
+          'A new PIN replaces the old one straight away.',
+          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 4),
+        switch (ref.watch(childrenProvider)) {
+          AsyncData(value: final children) => Column(
+              children: [
+                for (final child in children)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: AvatarBadge(child.avatar, size: 40),
+                    title: Text(child.name),
+                    subtitle: Text(
+                      child.isLocked
+                          ? 'Locked out: a new PIN lets them back in'
+                          : 'Age ${child.age}',
+                      style: child.isLocked
+                          ? TextStyle(color: scheme.error)
+                          : null,
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ChildFormScreen(existing: child),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          AsyncError() => Text(
+              "Couldn't load your children.",
+              style: text.bodyMedium?.copyWith(color: scheme.error),
+            ),
+          _ => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: LinearProgressIndicator(),
+            ),
+        },
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ChildFormScreen()),
+          ),
+          icon: const Icon(Icons.person_add_alt),
+          label: const Text('Add a child'),
         ),
         const Divider(height: 40),
         ListTile(

@@ -33,89 +33,92 @@ class RoomItemStyle extends CosmeticStyle {
 /// Everything that can go in a child's room, keyed as the server stores it,
 /// grouped by slot and ordered from the start of each slot's list.
 ///
-/// Rugs are plain colour swatches until the art arrives, since no Unicode 6
-/// emoji draws a rug. Titles, levels and placeholders are a starting set for
-/// the art team to replace (A2).
+/// Names are the Phase 3 plan's; the emoji are placeholders drawn on the
+/// item's colour until the room art (A2/L1) arrives.
 const roomItems = <String, RoomItemStyle>{
   // ---- rugs ----
-  'rug_sand': RoomItemStyle(
+  'rug_star': RoomItemStyle(
     slot: RoomSlot.rug,
-    title: 'Sand rug',
+    title: 'Star Rug',
+    emoji: '⭐',
     background: Color(0xFFEBDCCB),
   ),
-  'rug_ocean': RoomItemStyle(
+  'rug_rainbow': RoomItemStyle(
     slot: RoomSlot.rug,
-    title: 'Ocean rug',
-    background: Color(0xFF9CC3E6),
-    unlockLevel: 2,
-  ),
-  'rug_meadow': RoomItemStyle(
-    slot: RoomSlot.rug,
-    title: 'Meadow rug',
-    background: Color(0xFFB9DFA2),
-    unlockLevel: 4,
-  ),
-  'rug_sunset': RoomItemStyle(
-    slot: RoomSlot.rug,
-    title: 'Sunset rug',
-    background: Color(0xFFFFB38A),
-    unlockLevel: 6,
-  ),
-
-  // ---- wall art ----
-  'wall_clock': RoomItemStyle(
-    slot: RoomSlot.wall,
-    title: 'Clock',
-    emoji: '🕒',
-    background: Color(0xFFE4E7EA),
-  ),
-  'wall_rainbow': RoomItemStyle(
-    slot: RoomSlot.wall,
-    title: 'Rainbow picture',
+    title: 'Rainbow Rug',
     emoji: '🌈',
     background: Color(0xFFF7DEE9),
     unlockLevel: 2,
   ),
-  'wall_rocket': RoomItemStyle(
+  'rug_jungle': RoomItemStyle(
+    slot: RoomSlot.rug,
+    title: 'Jungle Rug',
+    emoji: '🌿',
+    background: Color(0xFFB9DFA2),
+    unlockLevel: 4,
+  ),
+  'rug_ocean': RoomItemStyle(
+    slot: RoomSlot.rug,
+    title: 'Ocean Wave Rug',
+    emoji: '🌊',
+    background: Color(0xFF9CC3E6),
+    unlockLevel: 6,
+  ),
+
+  // ---- wall art ----
+  'wall_sun': RoomItemStyle(
     slot: RoomSlot.wall,
-    title: 'Rocket poster',
-    emoji: '🚀',
-    background: Color(0xFFD5E6F5),
+    title: 'Cheerful Sun Painting',
+    emoji: '🌞',
+    background: Color(0xFFFFF1C2),
+  ),
+  'wall_map': RoomItemStyle(
+    slot: RoomSlot.wall,
+    title: 'Adventure Map',
+    emoji: '📜',
+    background: Color(0xFFFFE3CC),
+    unlockLevel: 2,
+  ),
+  'wall_superhero': RoomItemStyle(
+    slot: RoomSlot.wall,
+    title: 'Superhero Poster',
+    emoji: '⚡',
+    background: Color(0xFFF7DEE9),
     unlockLevel: 3,
   ),
-  'wall_star': RoomItemStyle(
+  'wall_space': RoomItemStyle(
     slot: RoomSlot.wall,
-    title: 'Gold star',
-    emoji: '⭐',
-    background: Color(0xFFFFF1C2),
+    title: 'Space Poster',
+    emoji: '🚀',
+    background: Color(0xFFD5E6F5),
     unlockLevel: 5,
   ),
 
   // ---- plants ----
-  'plant_seedling': RoomItemStyle(
+  'plant_daisy': RoomItemStyle(
     slot: RoomSlot.plant,
-    title: 'Seedling',
-    emoji: '🌱',
+    title: 'Blooming Daisy',
+    emoji: '🌼',
     background: Color(0xFFD9F0CB),
   ),
   'plant_cactus': RoomItemStyle(
     slot: RoomSlot.plant,
-    title: 'Cactus',
+    title: 'Cactus Buddy',
     emoji: '🌵',
     background: Color(0xFFD7F0C9),
     unlockLevel: 2,
   ),
   'plant_sunflower': RoomItemStyle(
     slot: RoomSlot.plant,
-    title: 'Sunflower',
+    title: 'Sunny Sunflower',
     emoji: '🌻',
     background: Color(0xFFFFE7B8),
     unlockLevel: 4,
   ),
-  'plant_palm': RoomItemStyle(
+  'plant_bonsai': RoomItemStyle(
     slot: RoomSlot.plant,
-    title: 'Palm tree',
-    emoji: '🌴',
+    title: 'Tiny Bonsai',
+    emoji: '🌳',
     background: Color(0xFFCFE8C0),
     unlockLevel: 6,
   ),
@@ -123,9 +126,9 @@ const roomItems = <String, RoomItemStyle>{
 
 /// What each slot holds until a child chooses something else.
 const defaultRoomItems = <RoomSlot, String>{
-  RoomSlot.rug: 'rug_sand',
-  RoomSlot.wall: 'wall_clock',
-  RoomSlot.plant: 'plant_seedling',
+  RoomSlot.rug: 'rug_star',
+  RoomSlot.wall: 'wall_sun',
+  RoomSlot.plant: 'plant_daisy',
 };
 
 /// The items that fit [slot], in the registry's order.

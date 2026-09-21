@@ -5,47 +5,48 @@ import 'cosmetic_style.dart';
 /// Hats and other headwear, keyed as the server stores them.
 ///
 /// "No hat" comes first and is what every child starts with, so a hat can
-/// always be taken off again. Titles, levels and placeholder art are a
-/// starting set for the art team to replace (A0).
+/// always be taken off. The Adventure Cap is open from the start so there is
+/// one to try. Names are the Phase 3 plan's; the emoji are placeholders until
+/// the drawn headwear (A0/L1) arrives.
 const headwear = <String, CosmeticStyle>{
   'none': CosmeticStyle(
     title: 'No hat',
     emoji: '😀',
     background: Color(0xFFE4E7EA),
   ),
-  'sun_hat': CosmeticStyle(
-    title: 'Sun hat',
+  'adventure_cap': CosmeticStyle(
+    title: 'Adventure Cap',
     emoji: '👒',
     background: Color(0xFFFFF1C2),
   ),
-  'party_hat': CosmeticStyle(
-    title: 'Party hat',
-    emoji: '🎉',
+  'ninja_headband': CosmeticStyle(
+    title: 'Ninja Headband',
+    emoji: '🎀',
     background: Color(0xFFF7DEE9),
     unlockLevel: 2,
   ),
-  'top_hat': CosmeticStyle(
-    title: 'Top hat',
-    emoji: '🎩',
-    background: Color(0xFFE4E1FF),
+  'pirate_hat': CosmeticStyle(
+    title: 'Pirate Hat',
+    emoji: '⚓',
+    background: Color(0xFFD5E6F5),
     unlockLevel: 3,
   ),
-  'crown': CosmeticStyle(
-    title: 'Crown',
-    emoji: '👑',
-    background: Color(0xFFFFE7B8),
+  'wizard_hat': CosmeticStyle(
+    title: 'Wizard Hat',
+    emoji: '🎩',
+    background: Color(0xFFE4E1FF),
     unlockLevel: 4,
   ),
-  'rescue_helmet': CosmeticStyle(
-    title: 'Rescue helmet',
-    emoji: '⛑',
+  'superhero_mask': CosmeticStyle(
+    title: 'Superhero Mask',
+    emoji: '🎭',
     background: Color(0xFFFFE3CC),
     unlockLevel: 5,
   ),
-  'graduation_cap': CosmeticStyle(
-    title: 'Clever cap',
-    emoji: '🎓',
-    background: Color(0xFFD5E6F5),
+  'space_helmet': CosmeticStyle(
+    title: 'Space Helmet',
+    emoji: '🌠',
+    background: Color(0xFFD9F0CB),
     unlockLevel: 6,
   ),
 };

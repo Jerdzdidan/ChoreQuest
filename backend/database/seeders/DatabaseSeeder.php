@@ -17,6 +17,12 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(ChoreTemplateSeeder::class);
 
+        // A household with weeks of approved quests, for looking at rewards.
+        // Never on a production database.
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(DemoAccountSeeder::class);
+        }
+
         // User::factory(10)->create();
 
         User::factory()->create([

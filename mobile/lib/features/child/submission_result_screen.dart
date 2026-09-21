@@ -6,6 +6,7 @@ import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../shared/format.dart';
+import '../../shared/theme.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
 import 'reward_callouts.dart';
@@ -40,23 +41,24 @@ class SubmissionResultScreen extends ConsumerWidget {
       _ => null,
     };
 
+    final colors = QuestColors.of(context);
     final (icon, colour, title, message) = switch (outcome) {
       Sent() when status == SubmissionStatus.approved => (
           Icons.celebration_rounded,
-          const Color(0xFF2E7D32),
+          colors.done,
           'You did it!',
           'Your screen time went up.',
         ),
       Sent() when status == SubmissionStatus.rejected => (
           Icons.image_search_rounded,
-          const Color(0xFF1D4A73),
+          colors.saved.ink,
           "Let's try another photo",
           "It's hard to see that it's finished. Take a new photo, or ask a "
               'grown-up to check it.',
         ),
       Sent() => (
           Icons.hourglass_top_rounded,
-          const Color(0xFF9A6412),
+          colors.waiting,
           'Great job!',
           'A grown-up will look at your photo soon.',
         ),
@@ -70,7 +72,7 @@ class SubmissionResultScreen extends ConsumerWidget {
       // know is that the photo is safe and nothing more needs doing.
       Queued() => (
           Icons.cloud_upload_rounded,
-          const Color(0xFF1D4A73),
+          colors.saved.ink,
           'Your photo is saved',
           'It will send by itself when the phone is online again.',
         ),
@@ -218,14 +220,7 @@ class _CelebrationState extends State<_Celebration> {
             minBlastForce: 8,
             maxBlastForce: 28,
             gravity: 0.3,
-            colors: const [
-              Color(0xFF2E7D32),
-              Color(0xFFFFC107),
-              Color(0xFF1E88E5),
-              Color(0xFFE91E63),
-              Color(0xFFFF7043),
-              Color(0xFF8E24AA),
-            ],
+            colors: QuestColors.of(context).confetti,
           ),
         ),
       ),

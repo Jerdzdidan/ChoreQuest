@@ -9,6 +9,7 @@ import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/uploads/client_token.dart';
 import '../../core/verification/chore_verifier.dart';
+import '../../shared/theme.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
 import 'submission_result_screen.dart';
@@ -140,7 +141,7 @@ class _ConfirmPhotoScreenState extends ConsumerState<ConfirmPhotoScreen> {
                     child: _BigChoice(
                       icon: Icons.send_rounded,
                       label: 'Send',
-                      background: const Color(0xFF2E7D32),
+                      background: QuestColors.of(context).done,
                       foreground: Colors.white,
                       busy: _sending,
                       onTap: _sending ? null : _send,
@@ -229,7 +230,7 @@ class _StubOutcomeChooserState extends ConsumerState<_StubOutcomeChooser> {
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3D6),
+        color: QuestColors.of(context).xp.fill,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

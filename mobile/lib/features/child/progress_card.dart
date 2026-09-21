@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/child_progress.dart';
 import '../../shared/avatars.dart';
 import '../../shared/leveling.dart';
+import '../../shared/theme.dart';
 import '../../shared/xp_bar.dart';
 
 /// The child's avatar and how far they have come: level, XP, the bar towards
@@ -25,12 +26,11 @@ class ProgressCard extends StatelessWidget {
   /// Opens the quest log when set, and the card says so.
   final VoidCallback? onTap;
 
-  static const gold = Color(0xFFFFF1C2);
-  static const ink = Color(0xFF6E5200);
-
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final colors = QuestColors.of(context);
+    final ink = colors.xp.ink;
     final value = progress.hasValue ? progress.requireValue : null;
     // Worked out on every build, so the label changes the moment a refresh
     // brings XP over a threshold.
@@ -60,10 +60,10 @@ class ProgressCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.star_rounded,
                           size: 22,
-                          color: Color(0xFFE0A100),
+                          color: colors.xpStar,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
@@ -119,7 +119,7 @@ class ProgressCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const Icon(Icons.emoji_events_rounded, size: 22, color: ink),
+                Icon(Icons.emoji_events_rounded, size: 22, color: ink),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
@@ -130,7 +130,7 @@ class ProgressCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: ink),
+                Icon(Icons.chevron_right_rounded, color: ink),
               ],
             ),
           ],
@@ -141,7 +141,7 @@ class ProgressCard extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: gold,
+      color: colors.xp.fill,
       clipBehavior: Clip.antiAlias,
       child: open == null
           ? content
@@ -159,12 +159,10 @@ class _StreakBadge extends StatelessWidget {
   final int days;
   final bool todayCounted;
 
-  static const _flame = Color(0xFFD9480F);
-  static const _cold = Color(0xFF7D6A3C);
-
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final colors = QuestColors.of(context);
     final alive = days > 0;
 
     return Semantics(
@@ -180,18 +178,18 @@ class _StreakBadge extends StatelessWidget {
                     ? Icons.local_fire_department
                     : Icons.local_fire_department_outlined,
                 size: 34,
-                color: alive ? _flame : _cold,
+                color: alive ? colors.flame : colors.xp.ink.withValues(alpha: 0.55),
               ),
               Text(
                 '$days',
                 style: text.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: ProgressCard.ink,
+                  color: colors.xp.ink,
                 ),
               ),
               Text(
                 days == 1 ? 'day' : 'days',
-                style: text.labelMedium?.copyWith(color: ProgressCard.ink),
+                style: text.labelMedium?.copyWith(color: colors.xp.ink),
               ),
             ],
           ),

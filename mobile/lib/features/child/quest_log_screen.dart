@@ -7,6 +7,7 @@ import '../../core/session/session_controller.dart';
 import '../../shared/async_view.dart';
 import '../../shared/day_bars.dart';
 import '../../shared/stat_tile.dart';
+import '../../shared/theme.dart';
 import 'badge_list.dart';
 import 'child_providers.dart';
 import 'choose_avatar_screen.dart';
@@ -84,13 +85,13 @@ class _Log extends StatelessWidget {
             label: 'Days in a row',
             value: '${p.currentStreak}',
             icon: Icons.local_fire_department_rounded,
-            iconColor: const Color(0xFFD9480F),
+            iconColor: QuestColors.of(context).flame,
           ),
           right: StatTile(
             label: 'Best ever',
             value: '${p.bestStreak}',
             icon: Icons.star_rounded,
-            iconColor: const Color(0xFFE0A100),
+            iconColor: QuestColors.of(context).xpStar,
           ),
         ),
         const SizedBox(height: 24),

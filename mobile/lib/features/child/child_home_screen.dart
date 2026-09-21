@@ -16,6 +16,7 @@ import '../../core/uploads/pending_upload.dart';
 import '../../shared/async_view.dart';
 import '../../shared/format.dart';
 import '../../shared/leveling.dart';
+import '../../shared/theme.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'chore_camera_screen.dart';
@@ -373,17 +374,17 @@ class _SavedPhotosCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const ink = Color(0xFF1D4A73);
+    final ink = QuestColors.of(context).saved.ink;
 
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: const Color(0xFFDCE6F2),
+      color: QuestColors.of(context).saved.fill,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
         child: Row(
           children: [
-            const Icon(Icons.cloud_upload_rounded, size: 32, color: ink),
+            Icon(Icons.cloud_upload_rounded, size: 32, color: ink),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

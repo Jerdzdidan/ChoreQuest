@@ -6,6 +6,7 @@ import '../../shared/badges.dart';
 import '../../shared/difficulty_xp.dart';
 import '../../shared/leveling.dart';
 import '../../shared/story_chapters.dart';
+import '../../shared/theme.dart';
 
 /// What an approved quest just earned: its XP, a new level, and any badge or
 /// story chapter it unlocked.
@@ -31,6 +32,7 @@ class RewardCallouts extends StatelessWidget {
     final before = this.before;
     final after = this.after;
     final gained = xpFor(difficulty);
+    final colors = QuestColors.of(context);
 
     final newLevel = before != null &&
             after != null &&
@@ -55,11 +57,11 @@ class RewardCallouts extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Callout(
-          leading: const Icon(Icons.star_rounded, size: 34, color: Color(0xFFE0A100)),
+          leading: Icon(Icons.star_rounded, size: 34, color: colors.xpStar),
           title: '+$gained XP',
           subtitle: newLevel == null ? 'XP earned' : 'Level up! You are level $newLevel.',
-          background: const Color(0xFFFFF1C2),
-          ink: const Color(0xFF6E5200),
+          background: colors.xp.fill,
+          ink: colors.xp.ink,
         ),
         for (final badge in newBadges)
           _Callout(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/chore.dart';
 import '../../shared/chore_icons.dart';
 import '../../shared/format.dart';
+import '../../shared/theme.dart';
 import '../../shared/difficulty_xp.dart';
 import 'child_providers.dart';
 
@@ -26,8 +27,6 @@ class ChoreCard extends StatelessWidget {
   final int? minutesPerPoint;
   final VoidCallback onTap;
 
-  static const _done = Color(0xFF2E7D32);
-
   @override
   Widget build(BuildContext context) {
     final chore = assignment.chore;
@@ -36,6 +35,7 @@ class ChoreCard extends StatelessWidget {
     final perPoint = minutesPerPoint;
     final due = assignment.dueTime;
     final difficulty = chore.difficulty;
+    final colors = QuestColors.of(context);
     final tier = difficultyStyleFor(difficulty);
 
     final (statusLabel, statusIcon, statusColour) = switch (state) {
@@ -43,14 +43,14 @@ class ChoreCard extends StatelessWidget {
       ChoreState.waiting => (
           'A grown-up will check',
           Icons.hourglass_top_rounded,
-          const Color(0xFF9A6412),
+          colors.waiting,
         ),
       ChoreState.queued => (
           'Saved, sending soon',
           Icons.cloud_upload_rounded,
-          const Color(0xFF1D4A73),
+          colors.saved.ink,
         ),
-      ChoreState.done => ('Done!', Icons.check_circle_rounded, _done),
+      ChoreState.done => ('Done!', Icons.check_circle_rounded, colors.done),
       ChoreState.tryAgain => ('Try another photo', Icons.refresh_rounded, scheme.error),
     };
     // A saved photo is already on its way: a second one for the same chore
@@ -67,7 +67,7 @@ class ChoreCard extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: done ? _done : scheme.outlineVariant,
+            color: done ? colors.done : scheme.outlineVariant,
             width: done ? 2 : 1,
           ),
         ),
@@ -98,16 +98,16 @@ class ChoreCard extends StatelessWidget {
                           _Pill(
                             icon: Icons.star_rounded,
                             label: '+${tier.xp} XP',
-                            background: Color(0xFFFFF1C2),
-                            ink: Color(0xFF6E5200),
+                            background: colors.xp.fill,
+                            ink: colors.xp.ink,
                           ),
                           _Pill(
                             icon: Icons.timer_outlined,
                             label: perPoint == null
                                 ? pointsLabel(assignment.points)
                                 : '+${formatMinutes(assignment.points * perPoint)}',
-                            background: const Color(0xFFDCE6F2),
-                            ink: const Color(0xFF1D4A73),
+                            background: colors.screenTime.fill,
+                            ink: colors.screenTime.ink,
                           ),
                           _Pill(
                             icon: tier.icon,

@@ -61,6 +61,12 @@ class ParentApi {
 
   Future<void> removeChild(int childId) => _api.delete('/children/$childId');
 
+  /// The whole catalogue, every age: the Quests tab (PQ1).
+  Future<List<ChoreTemplate>> catalogue() async {
+    final body = await _api.get('/chores');
+    return _list(body['chores'], ChoreTemplate.fromJson);
+  }
+
   /// Only the chores suited to this child's age.
   Future<List<ChoreTemplate>> catalogueFor(int childId) async {
     final body = await _api.get('/chores', query: {'child_id': childId});

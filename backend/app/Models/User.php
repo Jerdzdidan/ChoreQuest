@@ -18,8 +18,18 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * Defaults the database also applies, set here as well so a freshly
+     * created account answers with them before it is read back.
+     */
+    protected $attributes = [
+        'avatar' => 'owl',
+        'timezone' => self::DEFAULT_TIMEZONE,
+    ];
+
     protected $fillable = [
         'name',
+        'avatar',
         'email',
         'password',
         'household_code',

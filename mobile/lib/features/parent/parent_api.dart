@@ -158,6 +158,30 @@ class ParentApi {
     return Submission.fromJson(body['submission'] as Map<String, dynamic>);
   }
 
+  /// Changes the parent's own account. Only what is passed changes; a new
+  /// password needs the current one, which the server checks. Returns the
+  /// account as saved, shaped like the `parent` in a sign-in response.
+  Future<Map<String, dynamic>> updateAccount({
+    String? name,
+    String? email,
+    String? avatar,
+    String? password,
+    String? currentPassword,
+  }) async {
+    final body = await _api.patch(
+      '/me',
+      body: {
+        'name': ?name,
+        'email': ?email,
+        'avatar': ?avatar,
+        'password': ?password,
+        'password_confirmation': ?password,
+        'current_password': ?currentPassword,
+      },
+    );
+    return body['parent'] as Map<String, dynamic>;
+  }
+
   /// The latest 100 photos across the household as notifications, and how
   /// many arrived since the list was last opened.
   Future<NotificationFeed> notifications() async =>

@@ -31,7 +31,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $user->createToken('parent-device', ['parent'])->plainTextToken,
-            'parent' => $this->parentPayload($user),
+            'parent' => self::parentPayload($user),
         ], 201);
     }
 
@@ -53,7 +53,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $user->createToken('parent-device', ['parent'])->plainTextToken,
-            'parent' => $this->parentPayload($user),
+            'parent' => self::parentPayload($user),
         ]);
     }
 
@@ -68,7 +68,7 @@ class AuthController extends Controller
         if ($identity instanceof User) {
             return response()->json([
                 'type' => 'parent',
-                'parent' => $this->parentPayload($identity),
+                'parent' => self::parentPayload($identity),
             ]);
         }
 
@@ -90,13 +90,15 @@ class AuthController extends Controller
         return response()->json(['message' => 'Signed out.']);
     }
 
-    private function parentPayload(User $user): array
+    public static function parentPayload(User $user): array
     {
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'household_code' => $user->household_code,
+            'avatar' => $user->avatar,
+            'timezone' => $user->timezone,
         ];
     }
 }

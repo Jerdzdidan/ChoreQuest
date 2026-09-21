@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AllocationRuleController;
 use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuthController;
@@ -61,6 +62,9 @@ Route::middleware('auth:sanctum')->group(function () {
 */
 
 Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
+    // The parent's own account: name, email, picture, password.
+    Route::patch('/me', [AccountController::class, 'update']);
+
     Route::apiResource('children', ChildController::class);
 
     // The age-graded catalogue. ?child_id= filters it to that child's band.

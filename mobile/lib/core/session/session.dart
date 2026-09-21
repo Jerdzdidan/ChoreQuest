@@ -36,6 +36,7 @@ final class ParentSession extends Session {
     required this.name,
     required this.email,
     required this.householdCode,
+    this.avatar = 'owl',
   });
 
   /// From the body of POST /login or POST /register.
@@ -47,6 +48,7 @@ final class ParentSession extends Session {
       name: parent['name'] as String,
       email: parent['email'] as String,
       householdCode: parent['household_code'] as String,
+      avatar: parent['avatar'] as String? ?? 'owl',
     );
   }
 
@@ -56,6 +58,8 @@ final class ParentSession extends Session {
         name: json['name'] as String,
         email: json['email'] as String,
         householdCode: json['household_code'] as String,
+        // Sessions stored before parents had a picture fall back to the default.
+        avatar: json['avatar'] as String? ?? 'owl',
       );
 
   @override
@@ -67,6 +71,9 @@ final class ParentSession extends Session {
   /// Read aloud once to pair a child's device with this household.
   final String householdCode;
 
+  /// The parent's own picture, from the same set the children pick from.
+  final String avatar;
+
   /// Refreshes profile fields from GET /me, keeping the same token.
   ParentSession withProfile(Map<String, dynamic> parent) => ParentSession(
         token: token,
@@ -74,6 +81,7 @@ final class ParentSession extends Session {
         name: parent['name'] as String,
         email: parent['email'] as String,
         householdCode: parent['household_code'] as String,
+        avatar: parent['avatar'] as String? ?? avatar,
       );
 
   @override
@@ -84,6 +92,7 @@ final class ParentSession extends Session {
         'name': name,
         'email': email,
         'household_code': householdCode,
+        'avatar': avatar,
       };
 }
 

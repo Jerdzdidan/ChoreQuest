@@ -1,0 +1,265 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/api/api_exception.dart';
+import '../../core/session/session.dart';
+import '../../core/session/session_controller.dart';
+import '../../shared/avatars.dart';
+import '../../shared/inline_error.dart';
+import 'parent_providers.dart';
+
+/// The parent's own account: their picture, name, email and password.
+///
+/// Only what they change is sent. A new password needs the current one, so a
+/// phone left unlocked cannot be used to take the account over.
+class ParentProfileScreen extends ConsumerStatefulWidget {
+  const ParentProfileScreen({super.key});
+
+  @override
+  ConsumerState<ParentProfileScreen> createState() =>
+      _ParentProfileScreenState();
+}
+
+class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
+  final _details = GlobalKey<FormState>();
+  final _passwords = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _currentPassword = TextEditingController();
+  final _newPassword = TextEditingController();
+
+  String? _avatar;
+  bool _loaded = false;
+  bool _savingDetails = false;
+  bool _savingPassword = false;
+  String? _detailsError;
+  String? _passwordError;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _currentPassword.dispose();
+    _newPassword.dispose();
+    super.dispose();
+  }
+
+  /// Fills the fields once, from the signed-in account, and then leaves what
+  /// the parent is typing alone.
+  void _fillOnce(ParentSession parent) {
+    if (_loaded) return;
+    _loaded = true;
+    _name.text = parent.name;
+    _email.text = parent.email;
+    _avatar = parent.avatar;
+  }
+
+  Future<void> _saveDetails() async {
+    if (!(_details.currentState?.validate() ?? false)) return;
+    setState(() {
+      _savingDetails = true;
+      _detailsError = null;
+    });
+    try {
+      final saved = await ref.read(parentApiProvider).updateAccount(
+            name: _name.text.trim(),
+            email: _email.text.trim(),
+            avatar: _avatar,
+          );
+      await ref.read(sessionProvider.notifier).adoptParentProfile(saved);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Account saved.')));
+    } on ApiRejected catch (e) {
+      if (mounted) {
+        setState(() => _detailsError =
+            e.errorFor('email') ?? e.errorFor('name') ?? e.message);
+      }
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _detailsError = e.message);
+    } finally {
+      if (mounted) setState(() => _savingDetails = false);
+    }
+  }
+
+  Future<void> _savePassword() async {
+    if (!(_passwords.currentState?.validate() ?? false)) return;
+    setState(() {
+      _savingPassword = true;
+      _passwordError = null;
+    });
+    try {
+      await ref.read(parentApiProvider).updateAccount(
+            password: _newPassword.text,
+            currentPassword: _currentPassword.text,
+          );
+      if (!mounted) return;
+      _currentPassword.clear();
+      _newPassword.clear();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Password changed.')));
+    } on ApiRejected catch (e) {
+      if (mounted) {
+        setState(() => _passwordError =
+            e.errorFor('current_password') ?? e.errorFor('password') ?? e.message);
+      }
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _passwordError = e.message);
+    } finally {
+      if (mounted) setState(() => _savingPassword = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final parent = switch (ref.watch(sessionProvider)) {
+      AsyncData(value: final ParentSession p) => p,
+      _ => null,
+    };
+    if (parent == null) return const SizedBox.shrink();
+    _fillOnce(parent);
+
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final detailsError = _detailsError;
+    final passwordError = _passwordError;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Your account', style: text.titleMedium),
+        const SizedBox(height: 8),
+        Form(
+          key: _details,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Your picture',
+                style: text.titleSmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final key in avatars.keys)
+                    Semantics(
+                      button: true,
+                      selected: key == _avatar,
+                      label: avatarName(key),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _savingDetails
+                            ? null
+                            : () => setState(() => _avatar = key),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: key == _avatar
+                                  ? scheme.primary
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                          child: AvatarBadge(key, size: 44),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _name,
+                enabled: !_savingDetails,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Your name'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _email,
+                enabled: !_savingDetails,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (v) => (v == null || !v.contains('@'))
+                    ? 'Enter your email address.'
+                    : null,
+              ),
+              if (detailsError != null) ...[
+                const SizedBox(height: 12),
+                InlineError(detailsError),
+              ],
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _savingDetails ? null : _saveDetails,
+                child: _savingDetails
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save account'),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 40),
+        Text('Change password', style: text.titleMedium),
+        const SizedBox(height: 8),
+        Form(
+          key: _passwords,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _currentPassword,
+                enabled: !_savingPassword,
+                obscureText: true,
+                decoration:
+                    const InputDecoration(labelText: 'Current password'),
+                validator: (v) => (v == null || v.isEmpty)
+                    ? 'Enter your current password.'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _newPassword,
+                enabled: !_savingPassword,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'New password'),
+                validator: (v) => (v == null || v.length < 8)
+                    ? 'Use at least 8 characters.'
+                    : null,
+              ),
+              if (passwordError != null) ...[
+                const SizedBox(height: 12),
+                InlineError(passwordError),
+              ],
+              const SizedBox(height: 12),
+              FilledButton.tonal(
+                onPressed: _savingPassword ? null : _savePassword,
+                child: _savingPassword
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Change password'),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 40),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.logout),
+          title: const Text('Sign out'),
+          onTap: () => ref.read(sessionProvider.notifier).signOut(),
+        ),
+      ],
+    );
+  }
+}

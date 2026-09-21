@@ -7,6 +7,7 @@ import '../../shared/cosmetic_style.dart';
 import '../../shared/cosmetics.dart';
 import '../../shared/inline_error.dart';
 import '../../shared/leveling.dart';
+import '../../shared/theme.dart';
 import 'category_row.dart';
 import 'child_providers.dart';
 import 'wardrobe.dart';
@@ -112,6 +113,8 @@ class RoomScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final room = QuestColors.of(context).room;
+
     return Semantics(
       label: 'Your room: the ${wall.title} on the wall, the ${rug.title} on the floor '
           'and the ${plant.title} in the corner',
@@ -127,13 +130,13 @@ class RoomScene extends StatelessWidget {
                 return Stack(
                   children: [
                     // Wall and floor.
-                    Positioned.fill(child: Container(color: const Color(0xFFF3E7D3))),
+                    Positioned.fill(child: Container(color: room.wall)),
                     Positioned(
                       left: 0,
                       right: 0,
                       bottom: 0,
                       height: h * 0.42,
-                      child: Container(color: const Color(0xFFD9B98C)),
+                      child: Container(color: room.floor),
                     ),
                     // The picture on the wall, framed.
                     Positioned(
@@ -146,7 +149,7 @@ class RoomScene extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF8A6A45), width: 4),
+                          border: Border.all(color: room.frame, width: 4),
                         ),
                         child: CosmeticArt(wall, size: h * 0.22),
                       ),

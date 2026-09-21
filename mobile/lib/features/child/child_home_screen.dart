@@ -8,27 +8,27 @@ import '../../core/api/api_exception.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
-import '../../core/models/submission.dart';
 import '../../core/notifications/local_notifier.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
-import '../../core/uploads/pending_upload.dart';
 import '../../shared/async_view.dart';
 import '../../shared/format.dart';
 import '../../shared/leveling.dart';
 import '../../shared/theme.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
-import 'chore_camera_screen.dart';
-import 'chore_card.dart';
 import 'cosmetic_unlocks.dart';
 import 'outcome_watcher.dart';
+import 'place_quests_screen.dart';
 import 'progress_card.dart';
+import 'quest_list.dart';
 import 'quest_log_screen.dart';
+import 'quest_map.dart';
 import 'screen_time_sheet.dart';
 import 'upload_sync.dart';
 
-/// The child's home: their screen time, and today's chores as big cards.
+/// The child's home: their progress and screen time, and the quest map of
+/// today's quests, one stop for each place in the home (U10).
 class ChildHomeScreen extends ConsumerStatefulWidget {
   const ChildHomeScreen({super.key});
 
@@ -197,13 +197,10 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     );
   }
 
-  Future<void> _openCamera(Assignment assignment) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChoreCameraScreen(assignment: assignment),
-      ),
+  void _openPlace(QuestLocation place) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PlaceQuestsScreen(place: place)),
     );
-    if (mounted) refreshChildData(ref);
   }
 
   @override
@@ -215,12 +212,10 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     if (me == null) return const SizedBox.shrink();
 
     final chores = ref.watch(todayChoresProvider);
-    final submissions = ref.watch(mySubmissionsProvider);
+    final states = QuestStates.watch(ref, me.id);
     final balance = ref.watch(balanceProvider);
     final progress = ref.watch(progressProvider);
-    final saved = ref.watch(pendingUploadsProvider(me.id));
-    final unsent =
-        saved.hasValue ? saved.requireValue : const <PendingUpload>[];
+    final unsent = states.saved;
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -260,36 +255,21 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
               ),
             ],
             const SizedBox(height: 20),
-            Text('Your quests today', style: text.titleLarge),
+            Text('Your quest map', style: text.titleLarge),
             const SizedBox(height: 8),
             AsyncView<TodayChores>(
               value: chores,
               onRetry: () => refreshChildData(ref),
               builder: (context, today) {
-                if (today.chores.isEmpty) return const _NothingToday();
-
-                final sent = submissions.hasValue
-                    ? submissions.requireValue
-                    : const <Submission>[];
-                final perPoint = balance.hasValue
-                    ? balance.requireValue.minutesPerPoint
-                    : null;
-
-                return Column(
-                  children: [
-                    for (final assignment in today.chores)
-                      ChoreCard(
-                        assignment: assignment,
-                        state: choreStateFor(
-                          assignment,
-                          sent,
-                          today.date,
-                          saved: unsent,
-                        ),
-                        minutesPerPoint: perPoint,
-                        onTap: () => _openCamera(assignment),
-                      ),
-                  ],
+                if (today.chores.isEmpty) {
+                  return const NothingToday('No quests today!');
+                }
+                return QuestMap(
+                  tallies: tallyByPlace(
+                    today.chores,
+                    (assignment) => states.of(assignment, today.date),
+                  ),
+                  onOpen: _openPlace,
                 );
               },
             ),
@@ -410,33 +390,6 @@ class _SavedPhotosCard extends StatelessWidget {
               TextButton(onPressed: onSend, child: const Text('Send now')),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _NothingToday extends StatelessWidget {
-  const _NothingToday();
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.wb_sunny_outlined,
-            size: 56,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No quests today!',
-            style: text.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }

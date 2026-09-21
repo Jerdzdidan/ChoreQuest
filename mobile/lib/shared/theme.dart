@@ -56,7 +56,8 @@ ThemeData buildTheme() {
 typedef Tint = ({Color fill, Color ink});
 
 /// The game's colours, beside Material's scheme: XP gold, one colour per place
-/// in the home, and the gradient behind header bands. Every child and parent
+/// in the home, the gradient behind header bands, and the colours the map and
+/// the room are drawn in until their art arrives. Every child and parent
 /// screen reads them from here (`QuestColors.of(context)`), so changing a
 /// colour is a change to this one file.
 @immutable
@@ -72,6 +73,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
     required this.saved,
     required this.screenTime,
     required this.confetti,
+    required this.map,
+    required this.room,
   });
 
   /// Anything to do with XP and levels.
@@ -105,6 +108,13 @@ class QuestColors extends ThemeExtension<QuestColors> {
   /// The celebration when a photo is approved.
   final List<Color> confetti;
 
+  /// The quest map as drawn until its art (A3) arrives: the ground, and the
+  /// trail from place to place.
+  final ({Color ground, Color trail}) map;
+
+  /// The child's room as drawn until its art (A2) arrives.
+  final ({Color wall, Color floor, Color frame}) room;
+
   static const standard = QuestColors(
     xp: (fill: Color(0xFFFFF1C2), ink: Color(0xFF6E5200)),
     xpStar: Color(0xFFE0A100),
@@ -129,6 +139,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
       Color(0xFFFF7043),
       Color(0xFF8E24AA),
     ],
+    map: (ground: Color(0xFFE3F1DA), trail: Color(0xFFE6CF9F)),
+    room: (wall: Color(0xFFF3E7D3), floor: Color(0xFFD9B98C), frame: Color(0xFF8A6A45)),
   );
 
   /// The colours for this screen, or the standard set outside a themed app.
@@ -150,6 +162,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
     Tint? saved,
     Tint? screenTime,
     List<Color>? confetti,
+    ({Color ground, Color trail})? map,
+    ({Color wall, Color floor, Color frame})? room,
   }) =>
       QuestColors(
         xp: xp ?? this.xp,
@@ -162,6 +176,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
         saved: saved ?? this.saved,
         screenTime: screenTime ?? this.screenTime,
         confetti: confetti ?? this.confetti,
+        map: map ?? this.map,
+        room: room ?? this.room,
       );
 
   @override

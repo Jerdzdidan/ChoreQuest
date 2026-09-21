@@ -4,11 +4,13 @@ namespace App\Domain\Progress;
 
 use App\Domain\Verification\Decision;
 use App\Models\Child;
+use App\Models\User;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * A child's game progress, derived on every read from submissions that
@@ -101,6 +103,48 @@ class ProgressService
         }
 
         return $history;
+    }
+
+    /**
+     * Everything the badges measure, from this child's approved quests.
+     *
+     * One query, then pure arithmetic in BadgeStats, which also reads each
+     * quest's time of day in the household's timezone.
+     */
+    public function badgeStats(Child $child): BadgeStats
+    {
+        $rows = DB::table('submissions')
+            ->join('assignments', 'assignments.id', '=', 'submissions.assignment_id')
+            ->where('submissions.child_id', $child->id)
+            ->where('submissions.status', Decision::APPROVED)
+            ->orderBy('submissions.id')
+            ->get(['submissions.for_date', 'submissions.created_at', 'assignments.location'])
+            ->map(fn ($row) => [
+                'for_date' => (string) $row->for_date,
+                'created_at' => (string) $row->created_at,
+                'location' => (string) ($row->location ?? 'other'),
+            ])
+            ->all();
+
+        return BadgeStats::fromRows(
+            $rows,
+            $child->parent?->timezone ?: User::DEFAULT_TIMEZONE,
+            $this->longestStreak($child),
+            $this->familyContributions($child),
+        );
+    }
+
+    /**
+     * Approved quests this child contributed to a family boss quest. The
+     * table arrives with F1; until then nobody has contributed to one.
+     */
+    private function familyContributions(Child $child): int
+    {
+        if (! Schema::hasTable('family_quest_contributions')) {
+            return 0;
+        }
+
+        return DB::table('family_quest_contributions')->where('child_id', $child->id)->count();
     }
 
     /**

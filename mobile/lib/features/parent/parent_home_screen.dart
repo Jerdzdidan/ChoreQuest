@@ -8,6 +8,8 @@ import '../../shared/async_view.dart';
 import '../../shared/avatars.dart';
 import 'child_detail_screen.dart';
 import 'child_form_screen.dart';
+import 'notifications_screen.dart';
+import 'parent_profile_screen.dart';
 import 'parent_providers.dart';
 
 /// The parent's home: their children, and the code that pairs a child's phone.
@@ -27,8 +29,21 @@ class ParentHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Your profile',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: const Text('Profile')),
+                body: const ParentProfileScreen(),
+              ),
+            ),
+          ),
+          icon: AvatarBadge(parent.avatar, size: 32),
+        ),
         title: const Text('ChoreQuest'),
         actions: [
+          const NotificationBell(),
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),

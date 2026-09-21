@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/models/allocation_rule.dart';
 import '../../core/models/child_profile.dart';
+import '../../core/models/parent_notification.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/screen_time_report.dart';
 import '../../core/notifications/local_notifier.dart';
@@ -67,6 +68,39 @@ class ReviewFeedController extends AsyncNotifier<ReviewFeed> {
       if (ref.mounted) state = AsyncData(feed);
     } on ApiException catch (error, stackTrace) {
       if (ref.mounted && !state.hasValue) state = AsyncError(error, stackTrace);
+    }
+  }
+}
+
+/// The parent's notifications (NT1): every photo sent, newest first, and how
+/// many arrived since the list was last opened. The bell shows that count
+/// (PN2); the shell looks again on the same beat as the review lists.
+final notificationsProvider =
+    AsyncNotifierProvider.autoDispose<NotificationsController, NotificationFeed>(
+  NotificationsController.new,
+);
+
+class NotificationsController extends AsyncNotifier<NotificationFeed> {
+  @override
+  Future<NotificationFeed> build() => ref.watch(parentApiProvider).notifications();
+
+  /// Looks again. A failed look keeps the last feed on screen.
+  Future<void> refresh() async {
+    try {
+      final feed = await ref.read(parentApiProvider).notifications();
+      if (ref.mounted) state = AsyncData(feed);
+    } on ApiException catch (error, stackTrace) {
+      if (ref.mounted && !state.hasValue) state = AsyncError(error, stackTrace);
+    }
+  }
+
+  /// Marks everything seen. The bell drops to zero at once; the list keeps
+  /// showing which photos were new until it is next loaded.
+  Future<void> markSeen() async {
+    await ref.read(parentApiProvider).markNotificationsSeen();
+    final feed = state.value;
+    if (ref.mounted && feed != null) {
+      state = AsyncData(NotificationFeed(items: feed.items, unreadCount: 0));
     }
   }
 }

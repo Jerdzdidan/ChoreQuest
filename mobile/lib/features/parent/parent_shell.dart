@@ -69,8 +69,11 @@ class _ParentShellState extends ConsumerState<ParentShell>
 
   /// A plain call rather than a listener: Riverpod pauses the subscriptions of
   /// widgets that are off screen, and a notification must not wait for the
-  /// Review tab to be opened.
-  void _refresh() => ref.read(reviewFeedProvider.notifier).refresh();
+  /// Review tab to be opened. The bell's count comes along on the same beat.
+  void _refresh() {
+    ref.read(reviewFeedProvider.notifier).refresh();
+    ref.read(notificationsProvider.notifier).refresh();
+  }
 
   /// A tapped notification: show what it was about.
   void _open(NotificationTopic topic) {
@@ -90,6 +93,9 @@ class _ParentShellState extends ConsumerState<ParentShell>
   Widget build(BuildContext context) {
     final feed = ref.watch(reviewFeedProvider);
     final waiting = feed.hasValue ? feed.requireValue.waiting.length : 0;
+    // Kept loaded for as long as a parent is signed in, like the review
+    // lists, so the bell's count is there whichever tab is open.
+    ref.listen(notificationsProvider, (_, _) {});
 
     return Scaffold(
       body: IndexedStack(

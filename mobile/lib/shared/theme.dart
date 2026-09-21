@@ -75,6 +75,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
     required this.confetti,
     required this.map,
     required this.room,
+    required this.review,
+    required this.approved,
   });
 
   /// Anything to do with XP and levels.
@@ -115,6 +117,13 @@ class QuestColors extends ThemeExtension<QuestColors> {
   /// The child's room as drawn until its art (A2) arrives.
   final ({Color wall, Color floor, Color frame}) room;
 
+  /// A photo the checker left to a grown-up: orange, and always with a flag,
+  /// so it never depends on colour alone.
+  final Tint review;
+
+  /// A photo the checker approved on its own: green, with a tick.
+  final Tint approved;
+
   static const standard = QuestColors(
     xp: (fill: Color(0xFFFFF1C2), ink: Color(0xFF6E5200)),
     xpStar: Color(0xFFE0A100),
@@ -141,6 +150,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
     ],
     map: (ground: Color(0xFFE3F1DA), trail: Color(0xFFE6CF9F)),
     room: (wall: Color(0xFFF3E7D3), floor: Color(0xFFD9B98C), frame: Color(0xFF8A6A45)),
+    review: (fill: Color(0xFFFFE2CC), ink: Color(0xFF9C3D00)),
+    approved: (fill: Color(0xFFD5EFD8), ink: Color(0xFF1E5E2A)),
   );
 
   /// The colours for this screen, or the standard set outside a themed app.
@@ -164,6 +175,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
     List<Color>? confetti,
     ({Color ground, Color trail})? map,
     ({Color wall, Color floor, Color frame})? room,
+    Tint? review,
+    Tint? approved,
   }) =>
       QuestColors(
         xp: xp ?? this.xp,
@@ -178,6 +191,8 @@ class QuestColors extends ThemeExtension<QuestColors> {
         confetti: confetti ?? this.confetti,
         map: map ?? this.map,
         room: room ?? this.room,
+        review: review ?? this.review,
+        approved: approved ?? this.approved,
       );
 
   @override

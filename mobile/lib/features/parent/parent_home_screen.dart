@@ -5,15 +5,16 @@ import '../../core/models/child_profile.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../shared/async_view.dart';
-import '../../shared/avatars.dart';
+import '../../shared/theme.dart';
 import 'child_board_card.dart';
-import 'child_form_screen.dart';
 import 'notifications_screen.dart';
-import 'parent_profile_screen.dart';
 import 'parent_providers.dart';
 import 'suggested_quests.dart';
 
-/// The parent's home: their children, and the code that pairs a child's phone.
+/// The Board tab: the code that pairs a child's phone, each child with what
+/// they have earned against their own caps (BD1), and quests to give out
+/// (BD2). The shell above it holds the bar, the tabs and the Add child
+/// button (PN1).
 class ParentHomeScreen extends ConsumerWidget {
   const ParentHomeScreen({super.key});
 
@@ -28,41 +29,17 @@ class ParentHomeScreen extends ConsumerWidget {
     final children = ref.watch(childrenProvider);
     final text = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Your profile',
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => Scaffold(
-                appBar: AppBar(title: const Text('Profile')),
-                body: const ParentProfileScreen(),
-              ),
-            ),
-          ),
-          icon: AvatarBadge(parent.avatar, size: 32),
-        ),
-        title: const Text('ChoreQuest'),
-        actions: [
-          const NotificationBell(),
-          IconButton(
-            tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(sessionProvider.notifier).signOut(),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'add-child',
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ChildFormScreen()),
-        ),
-        icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add child'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(childrenProvider.future),
-        child: ListView(
+    final feed = ref.watch(reviewFeedProvider);
+    final waiting = feed.hasValue ? feed.requireValue.waiting.length : 0;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(childrenProvider);
+        await ref.read(reviewFeedProvider.notifier).refresh();
+        await ref.read(childrenProvider.future);
+      },
+      child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           // Room at the bottom so the button never covers the last child.
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
@@ -70,6 +47,10 @@ class ParentHomeScreen extends ConsumerWidget {
               'Hello, ${parent.name}',
               style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
+            if (waiting > 0) ...[
+              const SizedBox(height: 16),
+              _WaitingCard(count: waiting),
+            ],
             const SizedBox(height: 16),
             _HouseholdCodeCard(code: parent.householdCode),
             const SizedBox(height: 24),
@@ -89,6 +70,47 @@ class ParentHomeScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             const SuggestedQuests(),
           ],
+        ),
+    );
+  }
+}
+
+/// Photos the checker left to a grown-up, and the way to them. The bell
+/// carries the same list (NT2); this is here because a photo waiting is the
+/// one thing on this screen that cannot wait.
+class _WaitingCard extends StatelessWidget {
+  const _WaitingCard({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = QuestColors.of(context).review;
+    final text = Theme.of(context).textTheme;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: tint.fill,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(Icons.flag_rounded, color: tint.ink),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  count == 1 ? '1 photo needs your review' : '$count photos need your review',
+                  style: text.titleSmall?.copyWith(color: tint.ink, fontWeight: FontWeight.w700),
+                ),
+              ),
+              Icon(Icons.chevron_right, color: tint.ink),
+            ],
+          ),
         ),
       ),
     );

@@ -6,7 +6,7 @@ import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../shared/async_view.dart';
 import '../../shared/avatars.dart';
-import 'child_detail_screen.dart';
+import 'child_board_card.dart';
 import 'child_form_screen.dart';
 import 'notifications_screen.dart';
 import 'parent_profile_screen.dart';
@@ -81,7 +81,7 @@ class ParentHomeScreen extends ConsumerWidget {
                   ? const _NoChildrenYet()
                   : Column(
                       children: [
-                        for (final child in list) _ChildCard(child: child),
+                        for (final child in list) ChildBoardCard(child: child),
                       ],
                     ),
             ),
@@ -156,39 +156,6 @@ class _NoChildrenYet extends StatelessWidget {
       child: Text(
         'Add your first child to start giving out chores.',
         style: TextStyle(color: scheme.onSurfaceVariant),
-      ),
-    );
-  }
-}
-
-class _ChildCard extends StatelessWidget {
-  const _ChildCard({required this.child});
-
-  final ChildProfile child;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: AvatarBadge(child.avatar, size: 48),
-        title: Text(child.name),
-        subtitle: child.isLocked
-            ? Text(
-                'Age ${child.age} · Locked out. Set a new PIN to unlock.',
-                style: TextStyle(color: scheme.error),
-              )
-            : Text('Age ${child.age}'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ChildDetailScreen(childId: child.id),
-          ),
-        ),
       ),
     );
   }

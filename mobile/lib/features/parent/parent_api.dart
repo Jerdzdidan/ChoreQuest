@@ -143,6 +143,17 @@ class ParentApi {
     return AllocationRule.fromJson(body['rule'] as Map<String, dynamic>);
   }
 
+  /// Changes one child's caps and nothing else (BD1): the exchange rate and
+  /// both thresholds stay as they are, and the server still checks that the
+  /// weekly cap is not below the daily one.
+  Future<AllocationRule> setCaps(int childId, {int? dailyCapMinutes, int? weeklyCapMinutes}) async {
+    final body = await _api.patch('/children/$childId/rule', body: {
+      'daily_cap_minutes': ?dailyCapMinutes,
+      'weekly_cap_minutes': ?weeklyCapMinutes,
+    });
+    return AllocationRule.fromJson(body['rule'] as Map<String, dynamic>);
+  }
+
   /// Photos with no decision yet, newest first. With [everything], the latest
   /// 100 of every kind, including those the checker decided.
   Future<List<Submission>> reviews({bool everything = false}) async {

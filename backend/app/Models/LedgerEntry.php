@@ -20,10 +20,20 @@ class LedgerEntry extends Model
     public const REVERSAL = 'reversal';
     public const ADJUSTMENT = 'adjustment';
 
+    /**
+     * A share of a family quest's reward (F3). Counts towards the daily and
+     * weekly caps like any other earning, and hangs off the child's own
+     * approved photo, so no screen time is ever written without one.
+     */
+    public const FAMILY_REWARD = 'family_reward';
+
+    /** The kinds that count against a cap. */
+    public const EARNING_KINDS = [self::EARNED, self::FAMILY_REWARD];
+
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'child_id', 'submission_id', 'entry_type', 'minutes',
+        'child_id', 'submission_id', 'family_quest_id', 'entry_type', 'minutes',
         'points', 'minutes_gross', 'minutes_forfeited', 'for_date', 'note',
     ];
 
@@ -44,5 +54,10 @@ class LedgerEntry extends Model
     public function submission(): BelongsTo
     {
         return $this->belongsTo(Submission::class);
+    }
+
+    public function familyQuest(): BelongsTo
+    {
+        return $this->belongsTo(FamilyQuest::class);
     }
 }

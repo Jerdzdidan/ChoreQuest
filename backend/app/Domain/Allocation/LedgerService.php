@@ -170,7 +170,8 @@ class LedgerService
     }
 
     /**
-     * Only earnings count towards a cap.
+     * Only earnings count towards a cap: a chore's own minutes and a share of
+     * a family quest's reward (F3) alike.
      *
      * A reversal must not hand back cap headroom: if it did, an
      * approve-reject-approve cycle would let a child earn past the daily
@@ -180,7 +181,7 @@ class LedgerService
     public function earnedOn(Child $child, Carbon $date): int
     {
         return (int) LedgerEntry::where('child_id', $child->id)
-            ->where('entry_type', LedgerEntry::EARNED)
+            ->whereIn('entry_type', LedgerEntry::EARNING_KINDS)
             ->whereDate('for_date', $date->toDateString())
             ->sum('minutes');
     }
@@ -191,7 +192,7 @@ class LedgerService
         $end = $start->copy()->addDays(6);
 
         return (int) LedgerEntry::where('child_id', $child->id)
-            ->where('entry_type', LedgerEntry::EARNED)
+            ->whereIn('entry_type', LedgerEntry::EARNING_KINDS)
             ->whereBetween('for_date', [$start->toDateString(), $end->toDateString()])
             ->sum('minutes');
     }

@@ -69,6 +69,12 @@ class User extends Authenticatable
         return $this->hasMany(Child::class);
     }
 
+    /** The quests this household works on together (F1). */
+    public function familyQuests(): HasMany
+    {
+        return $this->hasMany(FamilyQuest::class);
+    }
+
     /**
      * A short code the parent reads aloud once when pairing a child's device.
      * Ambiguous characters are excluded so it survives being read off a screen.

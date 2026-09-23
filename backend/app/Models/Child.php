@@ -69,6 +69,12 @@ class Child extends Model
         return $this->hasMany(Submission::class);
     }
 
+    /** What this child has contributed to the household's quests (F1). */
+    public function familyContributions(): HasMany
+    {
+        return $this->hasMany(FamilyQuestContribution::class);
+    }
+
     public function badges(): HasMany
     {
         return $this->hasMany(BadgeEarned::class);

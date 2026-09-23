@@ -89,6 +89,9 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
     // Screen-time report and running ledger for one child.
     Route::get('/children/{child}/report', [LedgerController::class, 'report']);
 
+    // One child's figures for the Activity tab: completion, streak, XP, week.
+    Route::get('/children/{child}/activity', [ProgressController::class, 'activity']);
+
     // One notification per photo sent, from the submissions themselves.
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/seen', [NotificationController::class, 'seen']);

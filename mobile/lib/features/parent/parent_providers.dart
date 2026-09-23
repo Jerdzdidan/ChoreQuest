@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/allocation_rule.dart';
+import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/parent_notification.dart';
 import '../../core/models/chore.dart';
@@ -40,6 +41,11 @@ final catalogueProvider =
 
 final ruleProvider = FutureProvider.autoDispose.family<AllocationRule, int>(
   (ref, childId) => ref.watch(parentApiProvider).rule(childId),
+);
+
+/// One child's Activity tab figures (ACT1).
+final activityProvider = FutureProvider.autoDispose.family<ChildActivity, int>(
+  (ref, childId) => ref.watch(parentApiProvider).activity(childId),
 );
 
 final reportProvider =

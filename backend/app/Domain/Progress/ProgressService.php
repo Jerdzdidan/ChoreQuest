@@ -23,8 +23,57 @@ use Illuminate\Support\Facades\Schema;
  */
 class ProgressService
 {
-    public function __construct(private readonly StreakCalculator $streaks)
+    public function __construct(
+        private readonly StreakCalculator $streaks,
+        private readonly CompletionRate $completionRate,
+    ) {
+    }
+
+    /**
+     * Quests due and quests done over the $days days up to and including
+     * $today (the household's date), for the Activity tab's completion rate
+     * (CompletionRate, ACT1).
+     *
+     * Assignments are read as they stand now. One paused or removed since is
+     * left out of the earlier days too, because nothing records when it
+     * stopped; a daily one counts from the household date it was created.
+     *
+     * @return array{days: int, due: int, done: int}
+     */
+    public function completion(Child $child, string $today, int $days = 7): array
     {
+        $timezone = $child->parent?->timezone ?: User::DEFAULT_TIMEZONE;
+        $end = new DateTimeImmutable($today, new DateTimeZone('UTC'));
+        $start = $end->modify('-'.($days - 1).' days');
+
+        $dates = [];
+        for ($day = $start; $day <= $end; $day = $day->modify('+1 day')) {
+            $dates[] = $day->format('Y-m-d');
+        }
+
+        $assignments = $child->assignments()->get()
+            ->map(fn ($assignment) => [
+                'id' => (int) $assignment->id,
+                'recurrence' => (string) $assignment->recurrence,
+                'scheduled_date' => $assignment->scheduled_date?->toDateString(),
+                'created_on' => $assignment->created_at->copy()->setTimezone($timezone)->toDateString(),
+                'active' => (bool) $assignment->is_active,
+            ])
+            ->all();
+
+        $approved = $child->submissions()
+            ->where('status', Decision::APPROVED)
+            ->whereBetween('for_date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->get(['assignment_id', 'for_date'])
+            ->map(fn ($submission) => [
+                'assignment_id' => (int) $submission->assignment_id,
+                'for_date' => $submission->for_date instanceof DateTimeInterface
+                    ? $submission->for_date->format('Y-m-d')
+                    : substr((string) $submission->for_date, 0, 10),
+            ])
+            ->all();
+
+        return ['days' => $days] + $this->completionRate->over($assignments, $approved, $dates);
     }
 
     /**

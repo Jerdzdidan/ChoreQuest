@@ -1,6 +1,7 @@
 import '../../core/api/api_client.dart';
 import '../../core/models/allocation_rule.dart';
 import '../../core/models/api_dates.dart';
+import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/parent_notification.dart';
@@ -198,6 +199,10 @@ class ParentApi {
 
   /// One child's screen time: balance, limits, totals, and the latest 200
   /// ledger rows.
+  /// One child's figures for the Activity tab (ACT1), all in one answer.
+  Future<ChildActivity> activity(int childId) async =>
+      ChildActivity.fromJson(await _api.get('/children/$childId/activity'));
+
   Future<ScreenTimeReport> report(int childId) async =>
       ScreenTimeReport.fromJson(await _api.get('/children/$childId/report'));
 

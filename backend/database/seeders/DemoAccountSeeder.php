@@ -103,6 +103,16 @@ class DemoAccountSeeder extends Seeder
         $today = $child->localNow()->startOfDay();
         $written = 0;
 
+        // The chores were given before the history begins, so each day of it
+        // counts them as due and the completion rate (ACT1) reads sensibly.
+        // Only ever moved earlier, so running this again changes nothing.
+        $given = $today->copy()->subDays(self::DAYS + 1)->utc();
+        foreach ($assignments as $assignment) {
+            if ($assignment->created_at->greaterThan($given)) {
+                $assignment->forceFill(['created_at' => $given])->saveQuietly();
+            }
+        }
+
         for ($d = self::DAYS; $d >= 1; $d--) {
             $day = $today->copy()->subDays($d);
 

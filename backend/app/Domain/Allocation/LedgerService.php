@@ -3,6 +3,7 @@
 namespace App\Domain\Allocation;
 
 use App\Models\Child;
+use App\Models\FamilyQuest;
 use App\Models\LedgerEntry;
 use App\Models\Submission;
 use Illuminate\Database\QueryException;
@@ -82,6 +83,69 @@ class LedgerService
                 // Lost a race to the unique index. The other writer's entry is
                 // the correct one, so this call becomes a no-op.
                 return $this->entryFor($submission, LedgerEntry::EARNED);
+            }
+        });
+    }
+
+    /**
+     * A child's share of a family quest's reward (F3).
+     *
+     * Hangs off one of that child's own approved photos, so no screen time is
+     * ever written without one, and goes through the same engine as a chore,
+     * so a reward cannot take a child past the day's or the week's cap. Safe
+     * to call twice: the unique index on (family_quest_id, child_id) means a
+     * second attempt writes nothing and the first entry comes back.
+     */
+    public function creditFamilyReward(
+        Child $child,
+        FamilyQuest $quest,
+        Submission $contribution,
+        Carbon $forDate,
+    ): ?LedgerEntry {
+        return DB::transaction(function () use ($child, $quest, $contribution, $forDate) {
+            $locked = Child::whereKey($child->id)->lockForUpdate()->firstOrFail();
+
+            $existing = LedgerEntry::where('family_quest_id', $quest->id)
+                ->where('child_id', $locked->id)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $rule = $locked->rule();
+
+            // The reward is minutes, not points, so it enters the engine at a
+            // minute each and the caps do the rest.
+            $allocation = $this->engine->compute(
+                points: $quest->reward_minutes_each,
+                minutesPerPoint: 1,
+                dailyCapMinutes: $rule->daily_cap_minutes,
+                weeklyCapMinutes: $rule->weekly_cap_minutes,
+                alreadyEarnedToday: $this->earnedOn($locked, $forDate),
+                alreadyEarnedThisWeek: $this->earnedInWeekOf($locked, $forDate),
+            );
+
+            try {
+                return LedgerEntry::create([
+                    'child_id' => $locked->id,
+                    'submission_id' => $contribution->id,
+                    'family_quest_id' => $quest->id,
+                    'entry_type' => LedgerEntry::FAMILY_REWARD,
+                    'minutes' => $allocation->releasedMinutes,
+                    'points' => null,
+                    'minutes_gross' => $allocation->grossMinutes,
+                    'minutes_forfeited' => $allocation->forfeitedMinutes,
+                    'for_date' => $forDate,
+                    'note' => 'Family quest: '.$quest->title
+                        .($allocation->cappedBy ? ', trimmed by the '.$allocation->cappedBy.' limit' : ''),
+                ]);
+            } catch (QueryException) {
+                // Lost a race to the unique index; the other writer's entry is
+                // the correct one.
+                return LedgerEntry::where('family_quest_id', $quest->id)
+                    ->where('child_id', $locked->id)
+                    ->first();
             }
         });
     }

@@ -19,6 +19,7 @@ import 'avatar_screen.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
 import 'cosmetic_unlocks.dart';
+import 'family_quest_banner.dart';
 import 'outcome_watcher.dart';
 import 'place_quests_screen.dart';
 import 'progress_card.dart';
@@ -321,6 +322,8 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
             ),
           ],
           const SizedBox(height: 20),
+          // Its own gap underneath when it shows, none at all when it does not.
+          const FamilyQuestBanner(),
           Text('Your quest map', style: text.titleLarge),
           const SizedBox(height: 8),
           AsyncView<TodayChores>(

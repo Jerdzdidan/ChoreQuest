@@ -38,6 +38,30 @@ class FamilyQuestController extends Controller
         ]);
     }
 
+    /**
+     * The household's quests as a child sees them (F3): the one running, the
+     * next to start, and the last few there were, so a child can see what
+     * everyone is working on together.
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        $child = $request->user();
+        $parent = $child->parent;
+        $today = $child->localNow();
+        $names = $parent ? $parent->children()->pluck('name', 'id') : collect();
+
+        $quests = $parent
+            ? $parent->familyQuests()->orderByDesc('ends_at')->orderByDesc('id')->limit(10)->get()
+            : collect();
+
+        return response()->json([
+            'today' => $today->toDateString(),
+            'family_quests' => $quests
+                ->map(fn (FamilyQuest $quest) => self::payloadFor($quest, $this->quests, $today, $names))
+                ->all(),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $parent = $request->user();

@@ -5,6 +5,7 @@ import '../../core/api/api_client.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
+import '../../core/models/family_quest.dart';
 import '../../core/models/submission.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/uploads/pending_upload.dart';
@@ -36,6 +37,11 @@ final mySubmissionsProvider = FutureProvider.autoDispose<List<Submission>>(
 
 final progressProvider = FutureProvider.autoDispose<ChildProgress>(
   (ref) => ref.watch(childApiProvider).progress(),
+);
+
+/// The household's shared quests, as this child sees them (F3).
+final myFamilyQuestsProvider = FutureProvider.autoDispose<List<FamilyQuest>>(
+  (ref) => ref.watch(childApiProvider).familyQuests(),
 );
 
 /// The household's children as the sign-in screen shows them, so a child
@@ -80,6 +86,7 @@ void refreshChildData(WidgetRef ref) {
   ref.invalidate(balanceProvider);
   ref.invalidate(mySubmissionsProvider);
   ref.invalidate(progressProvider);
+  ref.invalidate(myFamilyQuestsProvider);
   ref.invalidate(pendingUploadsProvider);
 }
 

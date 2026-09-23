@@ -4,6 +4,7 @@ import '../../core/api/api_client.dart';
 import '../../core/models/api_dates.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
+import '../../core/models/family_quest.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/cosmetics.dart';
 import '../../core/models/submission.dart';
@@ -71,6 +72,15 @@ class ChildApi {
 
   Future<ChildProgress> progress() async =>
       ChildProgress.fromJson(await _api.get('/my/progress'));
+
+  /// The quests the whole household is working on together (F3).
+  Future<List<FamilyQuest>> familyQuests() async {
+    final body = await _api.get('/my/family-quests');
+    return [
+      for (final raw in (body['family_quests'] as List? ?? const []).cast<Map<String, dynamic>>())
+        FamilyQuest.fromJson(raw),
+    ];
+  }
 
   /// Everything the child has unlocked.
   Future<Wardrobe> cosmetics() async =>

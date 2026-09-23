@@ -4,7 +4,10 @@ import 'api_dates.dart';
 enum LedgerKind {
   earned,
   consumed,
-  reversal;
+  reversal,
+
+  /// A share of a family quest's reward (F3).
+  familyReward;
 
   /// Null for a kind this version of the app does not know, which the report
   /// leaves out rather than guess at.
@@ -12,6 +15,7 @@ enum LedgerKind {
         'earned' => earned,
         'consumed' => consumed,
         'reversal' => reversal,
+        'family_reward' => familyReward,
         _ => null,
       };
 }

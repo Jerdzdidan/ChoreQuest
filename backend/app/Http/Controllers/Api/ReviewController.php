@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Allocation\LedgerService;
 use App\Domain\Progress\BadgeService;
+use App\Domain\Family\FamilyQuestService;
 use App\Domain\Verification\Decision;
 use App\Http\Controllers\Controller;
 use App\Models\Child;
@@ -26,6 +27,7 @@ class ReviewController extends Controller
     public function __construct(
         private readonly LedgerService $ledger,
         private readonly BadgeService $badges,
+        private readonly FamilyQuestService $family,
     ) {
     }
 
@@ -95,6 +97,10 @@ class ReviewController extends Controller
             if ($approving) {
                 $this->ledger->credit($submission);
 
+                // The household's shared quests count this photo too, and are
+                // paid out if it brings one to its target (F3).
+                $this->family->record($submission);
+
                 // Checked once the decision has committed, so a badge is never
                 // awarded for an approval that did not stick.
                 $childId = $submission->child_id;
@@ -107,6 +113,10 @@ class ReviewController extends Controller
                 });
             } else {
                 $this->ledger->reverse($submission);
+
+                // Shared progress must not count a photo the parent has just
+                // taken back. Minutes already paid for a finished quest stay.
+                $this->family->withdraw($submission);
             }
 
             return response()->json([

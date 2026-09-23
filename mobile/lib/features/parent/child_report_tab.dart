@@ -247,11 +247,16 @@ class _LedgerRow extends StatelessWidget {
           scheme.error,
           'Taken back: ${l.chore ?? 'a chore'}',
         ),
+      LedgerKind.familyReward => (
+          Icons.groups_rounded,
+          QuestColors.of(context).xp.ink,
+          l.note ?? 'Family quest',
+        ),
     };
     final overLimit = l.minutesForfeited ?? 0;
     final details = [
       MaterialLocalizations.of(context).formatMediumDate(l.forDate),
-      if (l.kind == LedgerKind.earned && overLimit > 0)
+      if (l.kind != LedgerKind.consumed && overLimit > 0)
         '${formatMinutes(overLimit)} over the limit',
       if (l.kind == LedgerKind.reversal && l.note != null) l.note!,
     ].join(' · ');

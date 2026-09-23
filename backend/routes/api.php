@@ -121,6 +121,9 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
     // XP and the rest of the game layer, derived from approvals.
     Route::get('/my/progress', [ProgressController::class, 'mine']);
 
+    // The household's shared quests, as a child sees them (F3).
+    Route::get('/my/family-quests', [FamilyQuestController::class, 'mine']);
+
     // A child choosing their own animal from those their level unlocks.
     Route::patch('/my/avatar', [MyAvatarController::class, 'update']);
 

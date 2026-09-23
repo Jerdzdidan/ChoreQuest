@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Allocation\LedgerService;
 use App\Domain\Progress\BadgeService;
+use App\Domain\Family\FamilyQuestService;
 use App\Domain\Verification\ConfidenceRouter;
 use App\Domain\Verification\Decision;
 use App\Http\Controllers\Controller;
@@ -23,6 +24,7 @@ class SubmissionController extends Controller
         private readonly ConfidenceRouter $router,
         private readonly LedgerService $ledger,
         private readonly BadgeService $badges,
+        private readonly FamilyQuestService $family,
     ) {
     }
 
@@ -106,6 +108,10 @@ class SubmissionController extends Controller
             $submission->setRelation('assignment', $assignment);
             $this->ledger->credit($submission);
             $this->badges->awardAfterApproval($child);
+
+            // An approval by the checker counts towards the household's
+            // shared quests too, exactly as a grown-up's does (F3).
+            $this->family->record($submission);
         }
 
         return response()->json(['submission' => $this->payload($submission)], 201);

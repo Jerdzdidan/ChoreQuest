@@ -108,6 +108,8 @@ class MilestoneReward {
     required this.emoji,
     required this.background,
     required this.ink,
+    this.asset,
+    this.tinted = false,
   });
 
   final String title;
@@ -118,6 +120,13 @@ class MilestoneReward {
   final String? emoji;
   final Color background;
   final Color ink;
+
+  /// The drawing under assets/, when there is one.
+  final String? asset;
+
+  /// Whether that drawing is black on transparent and takes [ink], as the
+  /// badges do, rather than a picture in its own colours.
+  final bool tinted;
 }
 
 /// Badges and story chapters, which open at milestones (a number of quests,
@@ -135,6 +144,8 @@ List<MilestoneReward> milestoneTrack(ChildProgress progress) {
         emoji: null,
         background: badgeStyleFor(badge.key).background,
         ink: badgeStyleFor(badge.key).ink,
+        asset: badgeStyleFor(badge.key).asset,
+        tinted: true,
       ),
   ];
   final chapters = [
@@ -148,6 +159,7 @@ List<MilestoneReward> milestoneTrack(ChildProgress progress) {
         emoji: chapter.emoji,
         background: chapter.background,
         ink: chapter.ink,
+        asset: chapter.asset,
       ),
   ];
   final all = [...badges, ...chapters];
@@ -169,6 +181,7 @@ class RecentReward {
     this.icon,
     this.emoji,
     this.asset,
+    this.tinted = false,
   });
 
   final String title;
@@ -179,6 +192,9 @@ class RecentReward {
   final IconData? icon;
   final String? emoji;
   final String? asset;
+
+  /// Whether the drawing is black on transparent and takes [ink].
+  final bool tinted;
 }
 
 /// The last few things the child earned, newest first: badges, the story
@@ -210,6 +226,8 @@ List<RecentReward> recentlyEarned(ChildProgress progress, Wardrobe? wardrobe, {i
           icon: badgeStyleFor(badge.key).icon,
           background: badgeStyleFor(badge.key).background,
           ink: badgeStyleFor(badge.key).ink,
+          asset: badgeStyleFor(badge.key).asset,
+          tinted: true,
         ),
     for (final chapter in storyChapters)
       if (chapter.milestone case BadgeMilestone(:final badgeKey))
@@ -219,6 +237,7 @@ List<RecentReward> recentlyEarned(ChildProgress progress, Wardrobe? wardrobe, {i
             kind: 'Story',
             at: at,
             emoji: chapter.emoji,
+            asset: chapter.asset,
             background: chapter.background,
             ink: chapter.ink,
           ),

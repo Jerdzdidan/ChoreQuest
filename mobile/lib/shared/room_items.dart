@@ -40,12 +40,14 @@ const roomItems = <String, RoomItemStyle>{
   'rug_star': RoomItemStyle(
     slot: RoomSlot.rug,
     title: 'Star Rug',
+    asset: 'assets/cosmetics/rugs/rug_star.png',
     emoji: '⭐',
     background: Color(0xFFEBDCCB),
   ),
   'rug_rainbow': RoomItemStyle(
     slot: RoomSlot.rug,
     title: 'Rainbow Rug',
+    asset: 'assets/cosmetics/rugs/rug_rainbow.png',
     emoji: '🌈',
     background: Color(0xFFF7DEE9),
     unlockLevel: 2,
@@ -53,6 +55,7 @@ const roomItems = <String, RoomItemStyle>{
   'rug_jungle': RoomItemStyle(
     slot: RoomSlot.rug,
     title: 'Jungle Rug',
+    asset: 'assets/cosmetics/rugs/rug_jungle.png',
     emoji: '🌿',
     background: Color(0xFFB9DFA2),
     unlockLevel: 4,
@@ -60,6 +63,7 @@ const roomItems = <String, RoomItemStyle>{
   'rug_ocean': RoomItemStyle(
     slot: RoomSlot.rug,
     title: 'Ocean Wave Rug',
+    asset: 'assets/cosmetics/rugs/rug_ocean.png',
     emoji: '🌊',
     background: Color(0xFF9CC3E6),
     unlockLevel: 6,
@@ -69,12 +73,14 @@ const roomItems = <String, RoomItemStyle>{
   'wall_sun': RoomItemStyle(
     slot: RoomSlot.wall,
     title: 'Cheerful Sun Painting',
+    asset: 'assets/cosmetics/wall/wall_sun.png',
     emoji: '🌞',
     background: Color(0xFFFFF1C2),
   ),
   'wall_map': RoomItemStyle(
     slot: RoomSlot.wall,
     title: 'Adventure Map',
+    asset: 'assets/cosmetics/wall/wall_map.png',
     emoji: '📜',
     background: Color(0xFFFFE3CC),
     unlockLevel: 2,
@@ -82,6 +88,7 @@ const roomItems = <String, RoomItemStyle>{
   'wall_superhero': RoomItemStyle(
     slot: RoomSlot.wall,
     title: 'Superhero Poster',
+    asset: 'assets/cosmetics/wall/wall_superhero.png',
     emoji: '⚡',
     background: Color(0xFFF7DEE9),
     unlockLevel: 3,
@@ -89,6 +96,7 @@ const roomItems = <String, RoomItemStyle>{
   'wall_space': RoomItemStyle(
     slot: RoomSlot.wall,
     title: 'Space Poster',
+    asset: 'assets/cosmetics/wall/wall_space.png',
     emoji: '🚀',
     background: Color(0xFFD5E6F5),
     unlockLevel: 5,
@@ -98,12 +106,14 @@ const roomItems = <String, RoomItemStyle>{
   'plant_daisy': RoomItemStyle(
     slot: RoomSlot.plant,
     title: 'Blooming Daisy',
+    asset: 'assets/cosmetics/plants/plant_daisy.png',
     emoji: '🌼',
     background: Color(0xFFD9F0CB),
   ),
   'plant_cactus': RoomItemStyle(
     slot: RoomSlot.plant,
     title: 'Cactus Buddy',
+    asset: 'assets/cosmetics/plants/plant_cactus.png',
     emoji: '🌵',
     background: Color(0xFFD7F0C9),
     unlockLevel: 2,
@@ -111,6 +121,7 @@ const roomItems = <String, RoomItemStyle>{
   'plant_sunflower': RoomItemStyle(
     slot: RoomSlot.plant,
     title: 'Sunny Sunflower',
+    asset: 'assets/cosmetics/plants/plant_sunflower.png',
     emoji: '🌻',
     background: Color(0xFFFFE7B8),
     unlockLevel: 4,
@@ -118,6 +129,7 @@ const roomItems = <String, RoomItemStyle>{
   'plant_bonsai': RoomItemStyle(
     slot: RoomSlot.plant,
     title: 'Tiny Bonsai',
+    asset: 'assets/cosmetics/plants/plant_bonsai.png',
     emoji: '🌳',
     background: Color(0xFFCFE8C0),
     unlockLevel: 6,

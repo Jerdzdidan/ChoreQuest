@@ -1,5 +1,34 @@
 import 'package:flutter/material.dart';
 
+/// A badge's picture: the drawn icon from game-icons.net (L1) in the colour
+/// asked for, or the Material icon when a badge has no drawing yet.
+class BadgeArt extends StatelessWidget {
+  const BadgeArt(this.style, {super.key, this.size = 30, this.colour});
+
+  final BadgeStyle style;
+  final double size;
+
+  /// Defaults to the badge's own ink; pass the pale colour for one not earned.
+  final Color? colour;
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = style.asset;
+    final ink = colour ?? style.ink;
+    if (asset == null) return Icon(style.icon, size: size, color: ink);
+
+    return Image.asset(
+      asset,
+      width: size,
+      height: size,
+      // The drawings are black on transparent, so they take the colour of
+      // whatever they are shown on.
+      color: ink,
+      colorBlendMode: BlendMode.srcIn,
+    );
+  }
+}
+
 /// How a badge looks and reads.
 ///
 /// The server stores only the key and alone decides when a badge is earned,
@@ -14,6 +43,7 @@ class BadgeStyle {
     required this.icon,
     required this.background,
     required this.ink,
+    this.asset,
   });
 
   final String title;
@@ -23,6 +53,11 @@ class BadgeStyle {
 
   /// What progress is counted in: singular, then plural.
   final (String, String) unit;
+
+  /// The drawn badge under assets/badges/, from game-icons.net (L1). Black
+  /// on transparent, so it is tinted with [ink] where it is shown; the Material
+  /// [icon] stands in if it is missing.
+  final String? asset;
 
   final IconData icon;
   final Color background;
@@ -37,6 +72,7 @@ const _quests = ('quest', 'quests');
 final _styles = <String, BadgeStyle>{
   'first_quest': BadgeStyle(
     title: 'Rookie Hero',
+    asset: 'assets/badges/first_quest.png',
     goal: (target) => 'Finish your very first quest.',
     unit: _quests,
     icon: Icons.flag_rounded,
@@ -45,6 +81,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'streak_7': BadgeStyle(
     title: 'Streak Star',
+    asset: 'assets/badges/streak_7.png',
     goal: (target) => 'Finish a quest $target days in a row.',
     unit: ('day', 'days'),
     icon: Icons.local_fire_department_rounded,
@@ -53,6 +90,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'quests_25': BadgeStyle(
     title: 'Chore Champion',
+    asset: 'assets/badges/quests_25.png',
     goal: (target) => 'Finish $target quests.',
     unit: _quests,
     icon: Icons.emoji_events_rounded,
@@ -61,6 +99,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'kitchen_hero': BadgeStyle(
     title: 'Kitchen Hero',
+    asset: 'assets/badges/kitchen_hero.png',
     goal: (target) => 'Finish $target quests in the kitchen.',
     unit: _quests,
     icon: Icons.kitchen_rounded,
@@ -69,6 +108,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'bedroom_hero': BadgeStyle(
     title: 'Bedroom Hero',
+    asset: 'assets/badges/bedroom_hero.png',
     goal: (target) => 'Finish $target quests in the bedroom.',
     unit: _quests,
     icon: Icons.bed_rounded,
@@ -77,6 +117,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'study_star': BadgeStyle(
     title: 'Study Star',
+    asset: 'assets/badges/study_star.png',
     goal: (target) => 'Finish $target quests at the study table.',
     unit: _quests,
     icon: Icons.menu_book_rounded,
@@ -85,6 +126,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'outdoor_explorer': BadgeStyle(
     title: 'Outdoor Explorer',
+    asset: 'assets/badges/outdoor_explorer.png',
     goal: (target) => 'Finish $target quests outdoors.',
     unit: _quests,
     icon: Icons.park_rounded,
@@ -93,6 +135,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'early_bird': BadgeStyle(
     title: 'Early Bird',
+    asset: 'assets/badges/early_bird.png',
     goal: (target) => 'Finish a quest before 9 in the morning.',
     unit: _quests,
     icon: Icons.wb_twilight_rounded,
@@ -101,6 +144,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'weekend_warrior': BadgeStyle(
     title: 'Weekend Warrior',
+    asset: 'assets/badges/weekend_warrior.png',
     goal: (target) => 'Finish a quest on a Saturday and on a Sunday.',
     unit: ('weekend', 'weekends'),
     icon: Icons.weekend_rounded,
@@ -109,6 +153,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'perfect_week': BadgeStyle(
     title: 'Perfect Week',
+    asset: 'assets/badges/perfect_week.png',
     goal: (target) => 'Finish a quest every day of one week.',
     unit: ('week', 'weeks'),
     icon: Icons.event_available_rounded,
@@ -117,6 +162,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'helping_hand': BadgeStyle(
     title: 'Helping Hand',
+    asset: 'assets/badges/helping_hand.png',
     goal: (target) => 'Finish $target quests in one day.',
     unit: _quests,
     icon: Icons.volunteer_activism_rounded,
@@ -125,6 +171,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'century_club': BadgeStyle(
     title: 'Century Club',
+    asset: 'assets/badges/century_club.png',
     goal: (target) => 'Finish $target quests.',
     unit: _quests,
     icon: Icons.military_tech_rounded,
@@ -133,6 +180,7 @@ final _styles = <String, BadgeStyle>{
   ),
   'team_player': BadgeStyle(
     title: 'Team Player',
+    asset: 'assets/badges/team_player.png',
     goal: (target) => 'Help your family finish a family quest.',
     unit: ('quest', 'quests'),
     icon: Icons.groups_rounded,

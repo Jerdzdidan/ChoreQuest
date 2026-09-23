@@ -59,7 +59,13 @@ class CosmeticArt extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.22),
       ),
       child: asset != null
-          ? Image.asset(asset, width: size * 0.9, height: size * 0.9)
+          ? Image.asset(
+              asset,
+              width: size * 0.9,
+              height: size * 0.9,
+              // Pixel art: crisp edges rather than a blur when it grows.
+              filterQuality: FilterQuality.none,
+            )
           : emoji != null
               ? ExcludeSemantics(
                   child: Text(emoji, style: TextStyle(fontSize: size * 0.5)),

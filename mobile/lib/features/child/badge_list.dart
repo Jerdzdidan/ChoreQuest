@@ -79,10 +79,10 @@ class _BadgeRow extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: earned ? Colors.white : scheme.surfaceContainerHighest,
               ),
-              child: Icon(
-                style.icon,
+              child: BadgeArt(
+                style,
                 size: 30,
-                color: earned ? style.ink : scheme.outline,
+                colour: earned ? style.ink : scheme.outline,
               ),
             ),
             const SizedBox(width: 12),

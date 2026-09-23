@@ -80,6 +80,7 @@ class StoryChapter {
 const storyChapters = <StoryChapter>[
   StoryChapter(
     number: 1,
+    asset: 'assets/cosmetics/chapters/chapter1.png',
     title: 'The New Hero',
     blurb: 'Every hero starts with a single quest. Yours has begun!',
     milestone: QuestsMilestone(1),
@@ -89,6 +90,7 @@ const storyChapters = <StoryChapter>[
   ),
   StoryChapter(
     number: 2,
+    asset: 'assets/cosmetics/chapters/chapter2.png',
     title: 'The Helpful Hero',
     blurb: 'Ten quests done. The whole house has noticed your help.',
     milestone: QuestsMilestone(10),
@@ -98,6 +100,7 @@ const storyChapters = <StoryChapter>[
   ),
   StoryChapter(
     number: 3,
+    asset: 'assets/cosmetics/chapters/chapter3.png',
     title: 'The Streak Keeper',
     blurb: 'Seven days in a row! A true hero keeps going.',
     milestone: BadgeMilestone('streak_7'),
@@ -107,6 +110,7 @@ const storyChapters = <StoryChapter>[
   ),
   StoryChapter(
     number: 4,
+    asset: 'assets/cosmetics/chapters/chapter4.png',
     title: 'The Team Quest',
     blurb: 'Heroes are stronger together. Your family finished a big quest!',
     milestone: BadgeMilestone('team_player'),
@@ -116,6 +120,7 @@ const storyChapters = <StoryChapter>[
   ),
   StoryChapter(
     number: 5,
+    asset: 'assets/cosmetics/chapters/chapter5.png',
     title: 'The Chore Champion',
     blurb: 'Twenty-five quests! You are a champion of your home.',
     milestone: BadgeMilestone('quests_25'),

@@ -171,6 +171,7 @@ class _RecentStrip extends StatelessWidget {
                         icon: reward.icon,
                         emoji: reward.emoji,
                         asset: reward.asset,
+                        tinted: reward.tinted,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -507,6 +508,8 @@ class _MilestoneListState extends State<_MilestoneList> {
                     ink: milestone.ink,
                     icon: milestone.icon,
                     emoji: milestone.emoji,
+                    asset: milestone.asset,
+                    tinted: milestone.tinted,
                     faded: !milestone.earned,
                   ),
                   const SizedBox(width: 12),
@@ -556,6 +559,7 @@ class _RewardPicture extends StatelessWidget {
     this.icon,
     this.emoji,
     this.asset,
+    this.tinted = false,
     this.faded = false,
   });
 
@@ -564,6 +568,10 @@ class _RewardPicture extends StatelessWidget {
   final IconData? icon;
   final String? emoji;
   final String? asset;
+
+  /// Whether the drawing is black on transparent and takes [ink], as the
+  /// badges do, rather than a picture in its own colours.
+  final bool tinted;
   final bool faded;
 
   static const _size = 44.0;
@@ -583,7 +591,14 @@ class _RewardPicture extends StatelessWidget {
         borderRadius: BorderRadius.circular(_size * 0.25),
       ),
       child: asset != null
-          ? Image.asset(asset, width: _size * 0.85, height: _size * 0.85)
+          ? Image.asset(
+              asset,
+              width: _size * 0.85,
+              height: _size * 0.85,
+              filterQuality: FilterQuality.none,
+              color: tinted ? ink : null,
+              colorBlendMode: tinted ? BlendMode.srcIn : BlendMode.dst,
+            )
           : icon != null
               ? Icon(icon, size: _size * 0.55, color: ink)
               : emoji != null

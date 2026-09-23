@@ -160,14 +160,23 @@ class RoomScene extends StatelessWidget {
                       left: w * 0.2,
                       width: w * 0.5,
                       height: h * 0.2,
-                      child: Container(
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.elliptical(w * 0.25, h * 0.1)),
+                        child: Container(
+                          alignment: Alignment.center,
                           color: rug.background,
-                          borderRadius: BorderRadius.all(Radius.elliptical(w * 0.25, h * 0.1)),
-                          border: Border.all(color: Colors.white, width: 3),
+                          // The drawn rug fills the oval; without one, its
+                          // placeholder emoji sits in the middle of it.
+                          child: rug.asset == null
+                              ? Text(rug.emoji ?? '', style: TextStyle(fontSize: h * 0.08))
+                              : Image.asset(
+                                  rug.asset!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  filterQuality: FilterQuality.none,
+                                ),
                         ),
-                        child: Text(rug.emoji ?? '', style: TextStyle(fontSize: h * 0.08)),
                       ),
                     ),
                     // The plant in the corner.

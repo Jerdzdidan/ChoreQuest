@@ -65,11 +65,7 @@ class RewardCallouts extends StatelessWidget {
         ),
         for (final badge in newBadges)
           _Callout(
-            leading: Icon(
-              badgeStyleFor(badge.key).icon,
-              size: 34,
-              color: badgeStyleFor(badge.key).ink,
-            ),
+            leading: BadgeArt(badgeStyleFor(badge.key), size: 34),
             title: 'New badge: ${badgeStyleFor(badge.key).title}',
             subtitle: badgeStyleFor(badge.key).goal(badge.target),
             background: badgeStyleFor(badge.key).background,

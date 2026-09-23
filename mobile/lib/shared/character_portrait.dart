@@ -90,7 +90,9 @@ class _Layer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final asset = style.asset;
-    if (asset != null) return Image.asset(asset, width: size, height: size);
+    if (asset != null) {
+      return Image.asset(asset, width: size, height: size, filterQuality: FilterQuality.none);
+    }
 
     return Container(
       width: size,

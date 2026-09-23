@@ -24,3 +24,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Free art (L1): Kenney's packs, CC0, and game-icons.net badges, CC BY 3.0.
+  # The credits screen names every author the licence asks for.
+  assets:
+    - assets/cosmetics/outfits/
+    - assets/cosmetics/headwear/
+    - assets/cosmetics/pets/
+    - assets/cosmetics/rugs/
+    - assets/cosmetics/wall/
+    - assets/cosmetics/plants/
+    - assets/cosmetics/chapters/
+    - assets/badges/

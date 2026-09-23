@@ -11,6 +11,7 @@ import 'child_form_screen.dart';
 import 'notifications_screen.dart';
 import 'parent_profile_screen.dart';
 import 'parent_providers.dart';
+import 'suggested_quests.dart';
 
 /// The parent's home: their children, and the code that pairs a child's phone.
 class ParentHomeScreen extends ConsumerWidget {
@@ -85,6 +86,8 @@ class ParentHomeScreen extends ConsumerWidget {
                       ],
                     ),
             ),
+            const SizedBox(height: 24),
+            const SuggestedQuests(),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/parent_notification.dart';
 import '../../core/models/chore.dart';
+import '../../core/models/family_quest.dart';
 import '../../core/models/screen_time_report.dart';
 import '../../core/notifications/local_notifier.dart';
 import '../../core/session/session_controller.dart';
@@ -41,6 +42,11 @@ final catalogueProvider =
 
 final ruleProvider = FutureProvider.autoDispose.family<AllocationRule, int>(
   (ref, childId) => ref.watch(parentApiProvider).rule(childId),
+);
+
+/// The household's shared quests (F2), for the Board and the form.
+final familyQuestsProvider = FutureProvider.autoDispose<List<FamilyQuest>>(
+  (ref) => ref.watch(parentApiProvider).familyQuests(),
 );
 
 /// One child's Activity tab figures (ACT1).

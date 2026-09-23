@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChildAuthController;
 use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\ChoreTemplateController;
+use App\Http\Controllers\Api\FamilyQuestController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\MyAvatarController;
 use App\Http\Controllers\Api\MyCosmeticsController;
@@ -91,6 +92,11 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
 
     // One child's figures for the Activity tab: completion, streak, XP, week.
     Route::get('/children/{child}/activity', [ProgressController::class, 'activity']);
+
+    // Quests the whole household works on together (F1, F2).
+    Route::get('/family-quests', [FamilyQuestController::class, 'index']);
+    Route::post('/family-quests', [FamilyQuestController::class, 'store']);
+    Route::delete('/family-quests/{familyQuest}', [FamilyQuestController::class, 'destroy']);
 
     // One notification per photo sent, from the submissions themselves.
     Route::get('/notifications', [NotificationController::class, 'index']);

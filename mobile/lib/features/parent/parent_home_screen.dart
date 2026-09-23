@@ -7,6 +7,7 @@ import '../../core/session/session_controller.dart';
 import '../../shared/async_view.dart';
 import '../../shared/theme.dart';
 import 'child_board_card.dart';
+import 'family_quest_card.dart';
 import 'notifications_screen.dart';
 import 'parent_providers.dart';
 import 'suggested_quests.dart';
@@ -81,6 +82,8 @@ class ParentHomeScreen extends ConsumerWidget {
                           ],
                         ),
                 ),
+                const SizedBox(height: 24),
+                const FamilyQuestCard(),
                 const SizedBox(height: 24),
                 const SuggestedQuests(),
               ],

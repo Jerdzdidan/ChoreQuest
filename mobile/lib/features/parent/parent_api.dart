@@ -4,6 +4,7 @@ import '../../core/models/api_dates.dart';
 import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/chore.dart';
+import '../../core/models/family_quest.dart';
 import '../../core/models/parent_notification.dart';
 import '../../core/models/screen_time_report.dart';
 import '../../core/models/submission.dart';
@@ -153,6 +154,33 @@ class ParentApi {
     });
     return AllocationRule.fromJson(body['rule'] as Map<String, dynamic>);
   }
+
+  /// The household's shared quests, the newest window first (F2).
+  Future<List<FamilyQuest>> familyQuests() async {
+    final body = await _api.get('/family-quests');
+    return _list(body['family_quests'], FamilyQuest.fromJson);
+  }
+
+  /// Sets up a shared quest. Dates are household days, as Y-m-d.
+  Future<FamilyQuest> createFamilyQuest({
+    required String title,
+    required int targetCount,
+    required int rewardMinutesEach,
+    required DateTime startsAt,
+    required DateTime endsAt,
+  }) async {
+    final body = await _api.post('/family-quests', body: {
+      'title': title,
+      'target_count': targetCount,
+      'reward_minutes_each': rewardMinutesEach,
+      'starts_at': isoDate(startsAt),
+      'ends_at': isoDate(endsAt),
+    });
+    return FamilyQuest.fromJson(body['family_quest'] as Map<String, dynamic>);
+  }
+
+  /// Calls a shared quest off. Minutes already paid stay paid.
+  Future<void> deleteFamilyQuest(int questId) => _api.delete('/family-quests/$questId');
 
   /// Photos with no decision yet, newest first. With [everything], the latest
   /// 100 of every kind, including those the checker decided.

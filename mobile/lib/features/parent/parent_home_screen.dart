@@ -39,38 +39,55 @@ class ParentHomeScreen extends ConsumerWidget {
         await ref.read(childrenProvider.future);
       },
       child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          // Room at the bottom so the button never covers the last child.
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: [
-            Text(
-              'Hello, ${parent.name}',
-              style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        children: [
+          HeaderBand(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hello, ${parent.name}',
+                  style: text.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _HouseholdCodeCard(code: parent.householdCode),
+              ],
             ),
-            if (waiting > 0) ...[
-              const SizedBox(height: 16),
-              _WaitingCard(count: waiting),
-            ],
-            const SizedBox(height: 16),
-            _HouseholdCodeCard(code: parent.householdCode),
-            const SizedBox(height: 24),
-            Text('Children', style: text.titleMedium),
-            const SizedBox(height: 8),
-            AsyncView<List<ChildProfile>>(
-              value: children,
-              onRetry: () => ref.invalidate(childrenProvider),
-              builder: (context, list) => list.isEmpty
-                  ? const _NoChildrenYet()
-                  : Column(
-                      children: [
-                        for (final child in list) ChildBoardCard(child: child),
-                      ],
-                    ),
+          ),
+          Padding(
+            // Room at the bottom so the button never covers the last child.
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (waiting > 0) ...[
+                  _WaitingCard(count: waiting),
+                  const SizedBox(height: 20),
+                ],
+                Text('Children', style: text.titleMedium),
+                const SizedBox(height: 8),
+                AsyncView<List<ChildProfile>>(
+                  value: children,
+                  onRetry: () => ref.invalidate(childrenProvider),
+                  builder: (context, list) => list.isEmpty
+                      ? const _NoChildrenYet()
+                      : Column(
+                          children: [
+                            for (final child in list) ChildBoardCard(child: child),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 24),
+                const SuggestedQuests(),
+              ],
             ),
-            const SizedBox(height: 24),
-            const SuggestedQuests(),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }

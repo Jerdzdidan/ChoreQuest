@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/submission.dart';
 import '../../shared/format.dart';
+import '../../shared/theme.dart';
 
 /// Where a photo stands, in the parent's words.
 String decisionLabel(Submission s) => switch (s.parentDecision) {
@@ -48,19 +49,11 @@ class DecisionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (background, foreground) = switch (submission.status) {
-      SubmissionStatus.pending => (
-          const Color(0xFFFFE9B8),
-          const Color(0xFF6E4A00),
-        ),
-      SubmissionStatus.approved => (
-          const Color(0xFFD5EFD8),
-          const Color(0xFF1E5E2A),
-        ),
-      SubmissionStatus.rejected => (
-          const Color(0xFFDCE6F2),
-          const Color(0xFF274B6E),
-        ),
+    final colors = QuestColors.of(context);
+    final (fill: background, ink: foreground) = switch (submission.status) {
+      SubmissionStatus.pending => colors.review,
+      SubmissionStatus.approved => colors.approved,
+      SubmissionStatus.rejected => colors.saved,
     };
 
     return Container(

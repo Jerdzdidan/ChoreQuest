@@ -9,6 +9,7 @@ import '../../core/models/child_profile.dart';
 import '../../shared/async_view.dart';
 import '../../shared/format.dart';
 import '../../shared/inline_error.dart';
+import '../../shared/theme.dart';
 import 'parent_providers.dart';
 
 /// A child's screen-time rules, edited as a draft and saved together.
@@ -296,21 +297,23 @@ class _ThresholdLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = QuestColors.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _LegendRow(
-          colour: const Color(0xFF2E7D32),
+          colour: colors.approved.ink,
           text: 'At least ${formatPercent(high)} sure it is done: approved '
               'automatically, and the screen time is added.',
         ),
         _LegendRow(
-          colour: const Color(0xFFB7791F),
+          colour: colors.review.ink,
           text: 'Between ${formatPercent(low)} and ${formatPercent(high)}: '
               'sent to you to decide.',
         ),
         _LegendRow(
-          colour: const Color(0xFFC0392B),
+          colour: Theme.of(context).colorScheme.error,
           text: '${formatPercent(low)} or less: your child is asked for another '
               'photo. You can still approve it yourself.',
         ),

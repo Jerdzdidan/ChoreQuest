@@ -9,6 +9,7 @@ import '../../shared/async_view.dart';
 import '../../shared/day_bars.dart';
 import '../../shared/format.dart';
 import '../../shared/stat_tile.dart';
+import '../../shared/theme.dart';
 import 'parent_providers.dart';
 
 /// A child's screen time for the parent: what is left, how close the limits
@@ -233,7 +234,7 @@ class _LedgerRow extends StatelessWidget {
     final (icon, colour, title) = switch (l.kind) {
       LedgerKind.earned => (
           Icons.add_circle_outline_rounded,
-          const Color(0xFF2E7D32),
+          QuestColors.of(context).done,
           l.chore ?? 'A chore',
         ),
       LedgerKind.consumed => (

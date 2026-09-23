@@ -5,6 +5,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../shared/avatars.dart';
+import '../../shared/credits_screen.dart';
 import '../../shared/inline_error.dart';
 import 'child_form_screen.dart';
 import 'parent_providers.dart';
@@ -304,6 +305,16 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
           label: const Text('Add a child'),
         ),
         const Divider(height: 40),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('Artwork and credits'),
+          subtitle: const Text('Who drew the pictures in ChoreQuest'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CreditsScreen()),
+          ),
+        ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.logout),

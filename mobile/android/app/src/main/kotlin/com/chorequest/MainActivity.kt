@@ -1,17 +1,26 @@
 package com.chorequest
 
 import android.Manifest
+import android.app.Activity
 import android.app.AlarmManager
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraManager
+import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.util.TimeZone
 
@@ -42,6 +51,20 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // Cameras (DV-8): whether this phone can use a USB camera at all, so
+        // the app can say so plainly, and a signal whenever one may have been
+        // plugged in or out. The camera plugin then lists what is there.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chorequest/cameras")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "usbCameraSupport") {
+                    result.success(packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_EXTERNAL))
+                } else {
+                    result.notImplemented()
+                }
+            }
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "com.chorequest/camera-changes")
+            .setStreamHandler(CameraChanges(this))
     }
 
     private fun readiness(): Map<String, Any> {
@@ -191,5 +214,56 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val ASK_PERMISSION = 4210
+    }
+}
+
+/**
+ * Tells Flutter that the cameras may have changed: a USB device attached or
+ * detached, or Android saying a camera came or went. It says nothing about
+ * which; the app lists them again. Only while Flutter listens.
+ */
+private class CameraChanges(private val activity: Activity) : EventChannel.StreamHandler {
+    private val cameras = activity.getSystemService(CameraManager::class.java)
+    private var sink: EventChannel.EventSink? = null
+
+    private val usb = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            sink?.success("usb")
+        }
+    }
+
+    private val availability = object : CameraManager.AvailabilityCallback() {
+        override fun onCameraAvailable(cameraId: String) {
+            sink?.success("available")
+        }
+
+        override fun onCameraUnavailable(cameraId: String) {
+            sink?.success("unavailable")
+        }
+    }
+
+    override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+        sink = events
+        val filter = IntentFilter().apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
+        // From the system only; nothing else may send these to the app.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.registerReceiver(usb, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            activity.registerReceiver(usb, filter)
+        }
+        cameras.registerAvailabilityCallback(availability, Handler(Looper.getMainLooper()))
+    }
+
+    override fun onCancel(arguments: Any?) {
+        sink = null
+        try {
+            activity.unregisterReceiver(usb)
+        } catch (_: IllegalArgumentException) {
+            // Never registered.
+        }
+        cameras.unregisterAvailabilityCallback(availability)
     }
 }

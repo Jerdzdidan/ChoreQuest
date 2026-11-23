@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/alarm/alarm_safety_net.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/camera/camera_reporter.dart';
 import '../../core/device/phone_readiness.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
@@ -71,6 +72,10 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
   final _ringScreens = <int>{};
   final _ringTimeouts = <int, Timer>{};
 
+  /// Tells the server what cameras this phone has, while the app is open
+  /// (DV-9).
+  late final CameraReporter _cameras = ref.read(cameraReporterProvider);
+
   /// The last "ready for alarms" check on this phone (DV-1).
   ReadinessResult? _readiness;
   var _offeredChecklist = false;
@@ -126,6 +131,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     // report carries the sync just made (DV-10).
     unawaited(_syncSchedule().then((_) => _checkReadiness()));
     _ringing = ref.read(questAlarmServiceProvider).backend.ringing.listen(_onRinging, onError: (_) {});
+    _cameras.start(ref.read(externalCameraSourceProvider).changes);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Photos saved while the app was closed go as soon as it opens.
       unawaited(_sendSaved());
@@ -262,6 +268,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     }
     _poll?.cancel();
     _away?.cancel();
+    _cameras.stop();
     super.dispose();
   }
 
@@ -285,8 +292,10 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       unawaited(_sendSaved());
       unawaited(_syncSchedule().then((_) => _checkReadiness()));
       _startPolling();
+      _cameras.start(ref.read(externalCameraSourceProvider).changes);
     } else if (state == AppLifecycleState.paused) {
       _poll?.cancel();
+      _cameras.stop();
       _watchWhileAway();
     }
   }

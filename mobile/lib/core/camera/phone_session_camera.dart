@@ -25,7 +25,9 @@ class PhoneSessionCamera implements SessionCamera {
   @override
   bool get isOpen => _controller?.value.isInitialized ?? false;
 
-  Future<CameraDescription> _lens() async {
+  /// The camera to open: the one facing [front]'s way.
+  @protected
+  Future<CameraDescription> lens() async {
     final cameras = await availableCameras().timeout(const Duration(seconds: 10));
     if (cameras.isEmpty) throw CameraException('NoCamera', 'This phone has no camera.');
     final wanted = front ? CameraLensDirection.front : CameraLensDirection.back;
@@ -35,7 +37,7 @@ class PhoneSessionCamera implements SessionCamera {
   @override
   Future<void> open() async {
     final controller = CameraController(
-      await _lens(),
+      await lens(),
       // Medium is plenty for a model that looks at 192 x 192, and keeps a
       // low-end phone cool.
       ResolutionPreset.medium,
@@ -60,7 +62,7 @@ class PhoneSessionCamera implements SessionCamera {
     final streaming = _onFrame;
     if (controller.value.isStreamingImages) await controller.stopImageStream();
     front = !front;
-    await controller.setDescription(await _lens());
+    await controller.setDescription(await lens());
     if (streaming != null) await startFrames(streaming);
   }
 

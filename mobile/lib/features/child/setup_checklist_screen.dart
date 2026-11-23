@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/device/phone_readiness.dart';
+import '../../core/models/camera.dart';
 import '../../shared/theme.dart';
 import 'quest_session_providers.dart';
 
@@ -13,6 +14,10 @@ import 'quest_session_providers.dart';
 /// this phone, and from the home whenever a row is red. Checked again on
 /// every return from Settings, and each check is reported to the server
 /// (DV-10).
+///
+/// Below the rows, the cameras this phone can see right now (DV-8), which
+/// change as a USB camera is plugged in or out, and a plain sentence when
+/// the phone cannot use USB cameras at all.
 class SetupChecklistScreen extends ConsumerStatefulWidget {
   const SetupChecklistScreen({super.key, this.initial});
 
@@ -29,6 +34,9 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
   ReadinessRow? _fixing;
   var _openingMaker = false;
   String? _note;
+  List<ReportedCamera>? _cameras;
+  bool? _usbSupported;
+  StreamSubscription<List<ReportedCamera>>? _cameraUpdates;
 
   @override
   void initState() {
@@ -36,18 +44,34 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
     _result = widget.initial;
     WidgetsBinding.instance.addObserver(this);
     unawaited(_refresh());
+    final reporter = ref.read(cameraReporterProvider);
+    _cameras = reporter.latest;
+    _cameraUpdates = reporter.updates.listen((cameras) {
+      if (mounted) setState(() => _cameras = cameras);
+    });
+    unawaited(reporter.refresh());
+    unawaited(_askUsb());
+  }
+
+  Future<void> _askUsb() async {
+    final supported = await ref.read(externalCameraSourceProvider).supported();
+    if (mounted) setState(() => _usbSupported = supported);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_cameraUpdates?.cancel());
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Back from a settings screen: see what changed.
-    if (state == AppLifecycleState.resumed) unawaited(_refresh());
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refresh());
+      unawaited(ref.read(cameraReporterProvider).refresh());
+    }
   }
 
   Future<void> _refresh() async {
@@ -128,6 +152,10 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
               ],
               if (result.makerBattery) _MakerCard(opening: _openingMaker, onOpen: _openingMaker ? null : _openMaker),
             ],
+            const SizedBox(height: 20),
+            Text('Cameras', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            _CamerasCard(cameras: _cameras, usbSupported: _usbSupported),
             if (_note != null) ...[
               const SizedBox(height: 12),
               Semantics(
@@ -241,6 +269,61 @@ class _RowCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What cameras this phone can see right now (DV-8).
+class _CamerasCard extends StatelessWidget {
+  const _CamerasCard({required this.cameras, required this.usbSupported});
+
+  final List<ReportedCamera>? cameras;
+  final bool? usbSupported;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final found = cameras;
+    final usb = found?.where((c) => c.kind == CameraKind.external).toList() ?? const <ReportedCamera>[];
+    final usbNote = switch (usbSupported) {
+      false => 'This phone does not support USB cameras.',
+      true when found != null && usb.isEmpty => 'No USB camera is plugged in. Plug one in and it shows here.',
+      _ => null,
+    };
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Semantics(
+          liveRegion: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (found == null)
+                Text('Looking for cameras…', style: text.bodyMedium)
+              else if (found.isEmpty)
+                Text('No camera found.', style: text.bodyMedium)
+              else
+                for (final camera in found)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(camera.kind == CameraKind.external ? Icons.usb_rounded : Icons.photo_camera_rounded),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(camera.label, style: text.bodyLarge)),
+                      ],
+                    ),
+                  ),
+              if (usbNote != null) ...[
+                const SizedBox(height: 8),
+                Text(usbNote, style: text.bodyMedium),
+              ],
+            ],
+          ),
         ),
       ),
     );

@@ -31,13 +31,9 @@ import 'submission_result_screen.dart';
 /// The words stay encouraging throughout: the child never sees a score or a
 /// failure message.
 class QuestSessionScreen extends ConsumerStatefulWidget {
-  const QuestSessionScreen({super.key, required this.assignment, this.cameraFallback = false});
+  const QuestSessionScreen({super.key, required this.assignment});
 
   final Assignment assignment;
-
-  /// The scheduled third-party camera was missing, so the phone is used
-  /// (DV-12).
-  final bool cameraFallback;
 
   @override
   ConsumerState<QuestSessionScreen> createState() => _QuestSessionScreenState();
@@ -71,6 +67,9 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
       prep = FramePrepWorker(size: ((config.json['model'] as Map?)?['input_size'] as num? ?? 192).toInt());
       await prep.start();
     }
+    // The scheduled third-party camera, or the phone's when it is missing
+    // (DV-12): the child can always start.
+    final choice = await ref.read(cameraChooserProvider).choose(widget.assignment);
     if (!mounted) {
       prep?.stop();
       return;
@@ -78,13 +77,13 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
     final stopAlarm = ref.read(alarmStopperProvider);
     final controller = QuestSessionController(
       assignment: widget.assignment,
-      camera: ref.read(sessionCameraProvider)(widget.assignment),
+      camera: choice.camera,
       detector: detector,
       thresholds: config.thresholdsFor(chore.key, catalogueMinSeconds: chore.minActiveSeconds),
       sendPackage: ref.read(sessionSenderProvider),
       onStopAlarm: () => stopAlarm(widget.assignment),
       prep: prep,
-      cameraFallback: widget.cameraFallback,
+      cameraFallback: choice.fellBack,
     )..addListener(_onChange);
     setState(() => _controller = controller);
     await controller.begin();
@@ -203,30 +202,73 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
                 top: 12,
                 left: 64,
                 right: 16,
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ChoreIcon(icon: chore.icon, category: chore.category, size: 40),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        chore.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              shadows: const [Shadow(blurRadius: 6)],
-                            ),
-                      ),
+                    Row(
+                      children: [
+                        ChoreIcon(icon: chore.icon, category: chore.category, size: 40),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            chore.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  shadows: const [Shadow(blurRadius: 6)],
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (controller != null && controller.cameraFallback && !reviewing) ...[
+                      const SizedBox(height: 8),
+                      const _CameraNote(),
+                    ],
                   ],
                 ),
               ),
               if (controller != null && !reviewing && controller.problem == null)
                 Positioned(left: 0, right: 0, bottom: 0, child: _SessionBar(controller: controller)),
               if (kDebugMode && controller != null && controller.detector is FakeDetector && !reviewing)
-                Positioned(top: 64, right: 8, child: _FakePanel(detector: controller.detector as FakeDetector)),
+                // Below the camera note when it shows.
+                Positioned(
+                  top: controller.cameraFallback ? 200 : 64,
+                  right: 8,
+                  child: _FakePanel(detector: controller.detector as FakeDetector),
+                ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The scheduled camera was not there, said kindly (DV-12).
+class _CameraNote extends StatelessWidget {
+  const _CameraNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.videocam_off_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                "The quest camera isn't connected, so let's use this phone's camera!",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+              ),
+            ),
+          ],
         ),
       ),
     );

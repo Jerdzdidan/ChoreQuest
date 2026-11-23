@@ -30,8 +30,6 @@ flutter:
   assets:
     - assets/cosmetics/layers/
     - assets/cosmetics/icons/
-    - assets/cosmetics/outfits/
-    - assets/cosmetics/headwear/
     - assets/cosmetics/pets/
     - assets/cosmetics/rugs/
     - assets/cosmetics/wall/

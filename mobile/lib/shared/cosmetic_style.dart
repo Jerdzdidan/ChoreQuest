@@ -15,6 +15,7 @@ class CosmeticStyle {
     required this.background,
     this.emoji,
     this.asset,
+    this.layer,
     this.unlockLevel = 1,
   });
 
@@ -28,7 +29,14 @@ class CosmeticStyle {
   final String? emoji;
 
   /// A transparent PNG under assets/cosmetics/, once drawn. Null until then.
+  /// The icon: what wardrobe tiles, unlock lists and reward callouts show.
   final String? asset;
+
+  /// What the character wears: a picture the size of the whole character,
+  /// drawn so the item is already in place, under assets/cosmetics/layers/
+  /// (written by tools/export_layers.py). Only bodies, outfits and headwear
+  /// have one; without it the portrait shows [asset] as a sticker instead.
+  final String? layer;
 
   /// The level a child must reach to unlock it. Levels come from
   /// lib/shared/leveling.dart; 1 means from the start.

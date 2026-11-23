@@ -9,6 +9,7 @@ class ChildProfile {
     required this.birthdate,
     required this.age,
     required this.isLocked,
+    this.device = PhoneReadiness.unknown,
   });
 
   factory ChildProfile.fromJson(Map<String, dynamic> json) => ChildProfile(
@@ -18,6 +19,7 @@ class ChildProfile {
         birthdate: parseApiDate(json['birthdate'] as String),
         age: json['age'] as int,
         isLocked: json['is_locked'] as bool? ?? false,
+        device: PhoneReadiness.parse((json['device'] as Map<String, dynamic>?)?['state'] as String?),
       );
 
   final int id;
@@ -28,6 +30,24 @@ class ChildProfile {
 
   /// Locked out after too many wrong PINs. Setting a new PIN lifts it.
   final bool isLocked;
+
+  /// Whether the child's phone is ready to ring (BE-9).
+  final PhoneReadiness device;
+}
+
+/// What the child's phone last said about its "ready for alarms" checklist.
+enum PhoneReadiness {
+  ready,
+  needsSetup,
+
+  /// The phone has never reported.
+  unknown;
+
+  static PhoneReadiness parse(String? raw) => switch (raw) {
+        'ready' => ready,
+        'needs_setup' => needsSetup,
+        _ => unknown,
+      };
 }
 
 /// Whole years from a birthdate to a day, counted the way the server counts.

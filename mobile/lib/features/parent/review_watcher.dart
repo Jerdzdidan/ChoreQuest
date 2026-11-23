@@ -9,16 +9,15 @@ class ReviewFeed {
   /// Photos with no decision yet, newest first.
   final List<Submission> waiting;
 
-  /// The latest photos of every kind, including those the checker decided.
+  /// The latest quests of every kind, older photos decided automatically
+  /// included.
   final List<Submission> recent;
 }
 
-/// Fetches the household's photos and announces the ones that are new.
+/// Fetches the household's quests and announces the ones that are new.
 ///
-/// Every new photo is announced, not only those waiting for a decision, so an
-/// automatic approval never passes the parent by unseen. The first look only
-/// takes note of what is there: signing in does not announce every photo
-/// already in the queue.
+/// Every new quest is announced. The first look only takes note of what is
+/// there: signing in does not announce every quest already in the queue.
 class ReviewWatcher {
   ReviewWatcher({required this.api, required this.notifier});
 
@@ -51,18 +50,20 @@ class ReviewWatcher {
   }
 }
 
-/// The notification for photos that have just arrived.
+/// The notification for quests that have just arrived.
 AppNotification alertForArrivals(List<Submission> arrived) {
   if (arrived.length == 1) {
     final s = arrived.single;
     return AppNotification(
       id: s.id,
       title: '${s.childName ?? 'Your child'}: ${s.choreName ?? 'a chore'}',
-      body: switch (s.routing) {
-        Routing.pendingReview => 'A photo is waiting for you to check.',
-        Routing.autoApproved => 'The checker approved this photo.',
-        Routing.autoRejected => 'The checker sent this photo back.',
-      },
+      body: s.isSession
+          ? 'Finished. Before and After are waiting for you to check.'
+          : switch (s.routing) {
+              Routing.pendingReview => 'A photo is waiting for you to check.',
+              Routing.autoApproved => 'This photo was approved automatically.',
+              Routing.autoRejected => 'This photo was sent back automatically.',
+            },
       topic: NotificationTopic.review,
     );
   }
@@ -74,9 +75,9 @@ AppNotification alertForArrivals(List<Submission> arrived) {
     // Submission ids start at 1, so a summary never replaces a single photo's
     // notification, only the previous summary.
     id: 0,
-    title: '${arrived.length} new photos',
+    title: '${arrived.length} new quests',
     body: switch (waiting) {
-      0 => 'From $from. The checker decided all of them.',
+      0 => 'From $from. All of them were decided automatically.',
       1 => 'From $from. 1 is waiting for you to check.',
       _ => 'From $from. $waiting are waiting for you to check.',
     },

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/parent_notification.dart';
+import '../../core/models/submission.dart';
 import '../../shared/async_view.dart';
 import '../../shared/avatars.dart';
 import '../../shared/format.dart';
@@ -14,12 +15,18 @@ import 'parent_providers.dart';
 import 'review_labels.dart';
 import 'submission_review_screen.dart';
 
-/// Every photo the children sent, as notifications (NT2): the ones the
-/// checker left to a grown-up on top, under an orange flag, and the rest
-/// newest first, the checker's approvals with a green tick.
+/// Every quest the children finished, as notifications (NT2): the ones
+/// waiting for the parent on top, those to check carefully first, then the
+/// alarm events (a grown-up stop, an alarm that timed out, a missing camera),
+/// then the rest newest first.
+///
+/// Each quest is marked by how much it needs the parent's eye (PR-3), in
+/// colour and icon both: Check carefully, orange with a flag; Looks genuine,
+/// green with a tick; Manual check, blue with an eye. Older single photos
+/// keep the marks they had.
 ///
 /// Opening one leads to the same review screen as everywhere else, with its
-/// Approve and Send back: there is no second way to decide a photo. Opening
+/// Approve and Send back: there is no second way to decide a quest. Opening
 /// the list marks everything in it seen, which clears the bell.
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -87,25 +94,39 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               value: feed,
               onRetry: () => ref.invalidate(notificationsProvider),
               builder: (context, loaded) {
-                final waiting = [for (final n in loaded.items) if (n.waitsForReview) n];
+                // Those to check carefully first, then newest first within
+                // each kind: the list order otherwise.
+                final waiting = [
+                  for (final (i, n) in loaded.items.indexed)
+                    if (n.waitsForReview) (i, n),
+                ]..sort((a, b) {
+                    final byUrgency = a.$2.priority.urgency.compareTo(b.$2.priority.urgency);
+                    return byUrgency != 0 ? byUrgency : a.$1.compareTo(b.$1);
+                  });
                 final rest = [for (final n in loaded.items) if (!n.waitsForReview) n];
-                if (loaded.items.isEmpty) return const _NoPhotos();
+                if (loaded.items.isEmpty && loaded.alarms.isEmpty) return const _NoPhotos();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (waiting.isNotEmpty) ...[
                       Text(
-                        waiting.length == 1 ? '1 photo needs you' : '${waiting.length} photos need you',
+                        waiting.length == 1 ? '1 quest needs you' : '${waiting.length} quests need you',
                         style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 8),
-                      for (final item in waiting) _NotificationTile(item: item, onOpen: () => _open(item)),
+                      for (final (_, item) in waiting) _NotificationTile(item: item, onOpen: () => _open(item)),
+                      const SizedBox(height: 12),
+                    ],
+                    if (loaded.alarms.isNotEmpty) ...[
+                      Text('Alarms', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
+                      for (final alarm in loaded.alarms) _AlarmTile(alarm: alarm),
                       const SizedBox(height: 12),
                     ],
                     if (rest.isNotEmpty) ...[
                       Text(
-                        waiting.isEmpty ? 'Latest photos' : 'Everything else',
+                        waiting.isEmpty ? 'Latest quests' : 'Everything else',
                         style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 8),
@@ -122,19 +143,38 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 }
 
-/// How one photo is marked: an icon and a line that differ for each routing,
-/// on a colour that differs too, so neither is needed alone to tell them
-/// apart.
+/// How one quest is marked: an icon and a line that differ for each
+/// priority, on a colour that differs too, so neither is needed alone to tell
+/// them apart (PR-3).
 (IconData, String, Tint) markFor(BuildContext context, ParentNotification item) {
   final colors = QuestColors.of(context);
   final scheme = Theme.of(context).colorScheme;
   final neutral = (fill: scheme.surfaceContainerHighest, ink: scheme.onSurfaceVariant);
   return switch (item.priority) {
+    NotificationPriority.checkCarefully => (Icons.flag_rounded, 'Check carefully', colors.review),
+    NotificationPriority.looksGenuine => (Icons.check_circle_rounded, 'Looks genuine', colors.approved),
+    NotificationPriority.manualCheck => (Icons.visibility_rounded, 'Manual check', colors.saved),
     NotificationPriority.review => item.waitsForReview
         ? (Icons.flag_rounded, 'Needs your review', colors.review)
         : (Icons.flag_outlined, 'You checked it', neutral),
-    NotificationPriority.approved => (Icons.check_circle_rounded, 'Approved by the checker', colors.approved),
-    NotificationPriority.sentBack => (Icons.undo_rounded, 'Sent back by the checker', neutral),
+    NotificationPriority.approved => (Icons.check_circle_outline_rounded, 'Approved automatically', colors.approved),
+    NotificationPriority.sentBack => (Icons.undo_rounded, 'Sent back automatically', neutral),
+  };
+}
+
+/// What a quest's line says beside when it arrived: the share of real work
+/// for a motion-checked session, nothing more for a manual one, and the
+/// automatic check's figure for an older photo.
+String? evidenceLine(ParentNotification item) {
+  final s = item.submission;
+  final active = s.activeSeconds;
+  return switch (s.mode) {
+    SessionMode.motion => active == null ? null : '${active < 60 ? '$active s' : '${active ~/ 60} min'} of real work',
+    SessionMode.manual => 'Before and After photos',
+    SessionMode.legacyPhoto => switch (s.confidenceDone) {
+        final done? => "${formatPercent(done)} sure it's done",
+        null => null,
+      },
   };
 }
 
@@ -150,7 +190,7 @@ class _NotificationTile extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final (icon, label, tint) = markFor(context, item);
-    final confidence = s.confidenceDone;
+    final line = evidenceLine(item);
     final flagged = item.waitsForReview;
 
     return Card(
@@ -218,12 +258,19 @@ class _NotificationTile extends StatelessWidget {
                             Text(
                               [
                                 sentLabel(context, s.submittedAt),
-                                if (confidence != null) "${formatPercent(confidence)} sure it's done",
+                                ?line,
                               ].join(' · '),
                               style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                             ),
                             const SizedBox(height: 6),
-                            _Mark(icon: icon, label: label, tint: tint),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                _Mark(icon: icon, label: label, tint: tint),
+                                if (s.parentDecision != null) DecisionChip(submission: s),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -271,6 +318,65 @@ class _Mark extends StatelessWidget {
   }
 }
 
+/// One alarm event (BE-10, DV-7, DV-12): what happened, to whom, when.
+class _AlarmTile extends StatelessWidget {
+  const _AlarmTile({required this.alarm});
+
+  final AlarmNotification alarm;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = QuestColors.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final name = alarm.childName;
+    final chore = alarm.chore == null ? 'a quest' : alarm.chore!;
+    final neutral = (fill: scheme.surfaceContainerHighest, ink: scheme.onSurfaceVariant);
+    final (IconData icon, String line, Tint tint) = switch (alarm.kind) {
+      AlarmEventKind.override => (
+          Icons.lock_open_rounded,
+          "A grown-up stopped $name's alarm for $chore with your password.",
+          colors.review,
+        ),
+      AlarmEventKind.timedOut => (
+          Icons.alarm_off_rounded,
+          "$name's alarm for $chore rang as long as it may and stopped. It counts as missed, with nothing taken away.",
+          neutral,
+        ),
+      AlarmEventKind.cameraMissing => (
+          Icons.videocam_off_rounded,
+          "The third-party camera wasn't connected, so $name used the phone camera for $chore.",
+          colors.saved,
+        ),
+    };
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: tint.fill,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: tint.ink),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(line, style: text.bodyMedium?.copyWith(color: tint.ink, fontWeight: alarm.unread ? FontWeight.w700 : null)),
+                  const SizedBox(height: 2),
+                  Text(sentLabel(context, alarm.at), style: text.bodySmall?.copyWith(color: tint.ink)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _NoPhotos extends StatelessWidget {
   const _NoPhotos();
 
@@ -286,7 +392,7 @@ class _NoPhotos extends StatelessWidget {
           Text('Nothing yet', style: text.titleLarge, textAlign: TextAlign.center),
           const SizedBox(height: 4),
           Text(
-            'Each photo your children send will show up here.',
+            'Each quest your children finish will show up here.',
             style: text.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -296,7 +402,7 @@ class _NoPhotos extends StatelessWidget {
   }
 }
 
-/// The bell for the parent's top bar (PN2): a count of photos sent since the
+/// The bell for the parent's top bar (PN2): a count of what arrived since the
 /// notifications were last opened, and the way into them.
 class NotificationBell extends ConsumerWidget {
   const NotificationBell({super.key});
@@ -309,8 +415,8 @@ class NotificationBell extends ConsumerWidget {
     return IconButton(
       tooltip: switch (unread) {
         0 => 'Notifications',
-        1 => '1 new photo',
-        _ => '$unread new photos',
+        1 => '1 new notification',
+        _ => '$unread new notifications',
       },
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const NotificationsScreen()),

@@ -197,7 +197,7 @@ class ParentApi {
   Future<void> deleteFamilyQuest(int questId) => _api.delete('/family-quests/$questId');
 
   /// Photos with no decision yet, newest first. With [everything], the latest
-  /// 100 of every kind, including those the checker decided.
+  /// 100 of every kind, older photos decided automatically included.
   Future<List<Submission>> reviews({bool everything = false}) async {
     final body = await _api.get(
       '/reviews',
@@ -206,8 +206,8 @@ class ParentApi {
     return _list(body['submissions'], Submission.fromJson);
   }
 
-  /// A parent's answer to one photo. It may confirm or overturn what the
-  /// checker decided, and may be changed later, except that a photo whose
+  /// A parent's answer to one quest. It may confirm or overturn what was
+  /// decided before, and may be changed later, except that a quest whose
   /// screen time has been taken back once cannot be approved again: the
   /// server answers that with 409.
   Future<Submission> decide(int submissionId, {required bool approved}) async {

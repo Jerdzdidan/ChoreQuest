@@ -123,7 +123,8 @@ class NotificationsController extends AsyncNotifier<NotificationFeed> {
     await ref.read(parentApiProvider).markNotificationsSeen();
     final feed = state.value;
     if (ref.mounted && feed != null) {
-      state = AsyncData(NotificationFeed(items: feed.items, unreadCount: 0));
+      // Everything carried over but the count: the alarm events too.
+      state = AsyncData(NotificationFeed(items: feed.items, alarms: feed.alarms, unreadCount: 0));
     }
   }
 }

@@ -93,7 +93,7 @@ class ChildBoardCard extends ConsumerWidget {
                     button: 'Set weekly cap',
                   ),
                 ],
-                _NextAlarm(childId: child.id),
+                _NextAlarm(child: child),
               ],
             ),
           ),
@@ -145,36 +145,86 @@ class ChildBoardCard extends ConsumerWidget {
 }
 
 /// The next quest alarm on this child's phone (PS-9): "Next: Mon 4:30 PM —
-/// Sweep the floor". Worked out from the child's saved schedule, so it moves
-/// as soon as the parent edits one.
+/// Sweep the floor", worked out from the child's saved schedule so it moves
+/// as soon as the parent edits one; and whether that phone is ready to ring
+/// (PR-4), from the checklist it last reported (BE-9), so a phone with
+/// alarms switched off says Needs setup without the parent opening anything.
 class _NextAlarm extends ConsumerWidget {
-  const _NextAlarm({required this.childId});
+  const _NextAlarm({required this.child});
 
-  final int childId;
+  final ChildProfile child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final assignments = ref.watch(assignmentsProvider(childId)).value;
-    if (assignments == null) return const SizedBox.shrink();
-
+    final assignments = ref.watch(assignmentsProvider(child.id)).value;
     final now = DateTime.now();
-    final next = nextQuestAlarm(assignments, now);
+    final next = assignments == null ? null : nextQuestAlarm(assignments, now);
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Icon(Icons.alarm_rounded, size: 18, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Expanded(
+          if (assignments != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.alarm_rounded, size: 18, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    next == null
+                        ? 'No quest alarms set'
+                        : 'Next: ${whenText(next.$2, now, MaterialLocalizations.of(context))} — ${next.$1.chore.name}',
+                    style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              ],
+            ),
+          _ReadyChip(readiness: child.device),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ready, Needs setup, or Not set up yet: the child's phone's alarm
+/// checklist, in colour and icon both.
+class _ReadyChip extends StatelessWidget {
+  const _ReadyChip({required this.readiness});
+
+  final PhoneReadiness readiness;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = QuestColors.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final (IconData icon, String label, Tint tint) = switch (readiness) {
+      PhoneReadiness.ready => (Icons.check_circle_rounded, 'Phone ready', colors.approved),
+      PhoneReadiness.needsSetup => (Icons.warning_amber_rounded, 'Needs setup', colors.review),
+      PhoneReadiness.unknown => (
+          Icons.help_outline_rounded,
+          'Phone not set up yet',
+          (fill: scheme.surfaceContainerHighest, ink: scheme.onSurfaceVariant),
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: tint.fill, borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: tint.ink),
+          const SizedBox(width: 4),
+          Flexible(
             child: Text(
-              next == null
-                  ? 'No quest alarms set'
-                  : 'Next: ${whenText(next.$2, now, MaterialLocalizations.of(context))} — ${next.$1.chore.name}',
-              style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: tint.ink, fontWeight: FontWeight.w700),
             ),
           ),
         ],

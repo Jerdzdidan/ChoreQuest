@@ -95,9 +95,9 @@ class ParentHomeScreen extends ConsumerWidget {
   }
 }
 
-/// Photos the checker left to a grown-up, and the way to them. The bell
-/// carries the same list (NT2); this is here because a photo waiting is the
-/// one thing on this screen that cannot wait.
+/// Quests waiting for the parent, and the way to them. The bell carries the
+/// same list (NT2); this is here because a quest waiting is the one thing on
+/// this screen that cannot wait.
 class _WaitingCard extends StatelessWidget {
   const _WaitingCard({required this.count});
 
@@ -124,7 +124,7 @@ class _WaitingCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  count == 1 ? '1 photo needs your review' : '$count photos need your review',
+                  count == 1 ? '1 quest needs your review' : '$count quests need your review',
                   style: text.titleSmall?.copyWith(color: tint.ink, fontWeight: FontWeight.w700),
                 ),
               ),

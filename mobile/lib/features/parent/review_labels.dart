@@ -4,21 +4,26 @@ import '../../core/models/submission.dart';
 import '../../shared/format.dart';
 import '../../shared/theme.dart';
 
-/// Where a photo stands, in the parent's words.
+/// Where a quest stands, in the parent's words. A quest session waits for
+/// the parent until they decide; only older single photos were ever decided
+/// automatically.
 String decisionLabel(Submission s) => switch (s.parentDecision) {
       SubmissionStatus.approved => 'You approved it',
       SubmissionStatus.rejected => 'You sent it back',
-      SubmissionStatus.pending || null => switch (s.routing) {
-          Routing.autoApproved => 'Approved by the checker',
-          Routing.autoRejected => 'Sent back by the checker',
-          Routing.pendingReview => 'Waiting for you',
-        },
+      SubmissionStatus.pending || null => s.isSession
+          ? 'Waiting for you'
+          : switch (s.routing) {
+              Routing.autoApproved => 'Approved automatically',
+              Routing.autoRejected => 'Sent back automatically',
+              Routing.pendingReview => 'Waiting for you',
+            },
     };
 
-/// What the checker made of a photo.
-String checkerLabel(Submission s) {
+/// For an older quest sent as one photo: what the automatic check made of
+/// it.
+String photoCheckLabel(Submission s) {
   final done = s.confidenceDone;
-  if (done == null) return "The checker didn't look at this one.";
+  if (done == null) return 'No automatic check ran on this photo.';
   return '${formatPercent(done)} sure the chore is done.';
 }
 

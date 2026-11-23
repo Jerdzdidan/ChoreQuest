@@ -44,10 +44,9 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
     final header = <Widget>[
       Text(
         switch (_show) {
-          _Show.waiting =>
-            "Photos the checker wasn't sure about, and chores it can't check.",
-          _Show.recent => 'The latest photos, including those the checker '
-              'decided. Open one to confirm or change it.',
+          _Show.waiting => 'Quests waiting for you to check.',
+          _Show.recent => 'The latest quests, including older photos decided '
+              'automatically. Open one to confirm or change it.',
         },
         style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
       ),

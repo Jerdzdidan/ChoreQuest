@@ -117,11 +117,12 @@ class QuestColors extends ThemeExtension<QuestColors> {
   /// The child's room as drawn until its art (A2) arrives.
   final ({Color wall, Color floor, Color frame}) room;
 
-  /// A photo the checker left to a grown-up: orange, and always with a flag,
-  /// so it never depends on colour alone.
+  /// A quest to check carefully (and an older photo left to a grown-up):
+  /// orange, and always with a flag, so it never depends on colour alone.
   final Tint review;
 
-  /// A photo the checker approved on its own: green, with a tick.
+  /// A quest that looks genuine (and an older photo approved automatically):
+  /// green, with a tick.
   final Tint approved;
 
   static const standard = QuestColors(

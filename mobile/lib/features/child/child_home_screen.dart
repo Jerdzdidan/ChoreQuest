@@ -131,7 +131,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     // report carries the sync just made (DV-10).
     unawaited(_syncSchedule().then((_) => _checkReadiness()));
     _ringing = ref.read(questAlarmServiceProvider).backend.ringing.listen(_onRinging, onError: (_) {});
-    _cameras.start(ref.read(externalCameraSourceProvider).changes);
+    _cameras.start(ref.read(cameraChangesProvider)());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Photos saved while the app was closed go as soon as it opens.
       unawaited(_sendSaved());
@@ -292,7 +292,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       unawaited(_sendSaved());
       unawaited(_syncSchedule().then((_) => _checkReadiness()));
       _startPolling();
-      _cameras.start(ref.read(externalCameraSourceProvider).changes);
+      _cameras.start(ref.read(cameraChangesProvider)());
     } else if (state == AppLifecycleState.paused) {
       _poll?.cancel();
       _cameras.stop();

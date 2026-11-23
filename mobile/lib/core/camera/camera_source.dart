@@ -69,3 +69,25 @@ class CameraChooser {
     return CameraChoice(phone(assignment), fellBack: true);
   }
 }
+
+/// One signal from any of [streams]: what the camera reporter listens to,
+/// whichever kind of camera changed.
+Stream<void> anyChange(Iterable<Stream<void>> streams) {
+  final listening = <StreamSubscription<void>>[];
+  late final StreamController<void> out;
+  out = StreamController<void>(
+    onListen: () {
+      for (final stream in streams) {
+        listening.add(stream.listen(out.add, onError: (_) {}));
+      }
+    },
+    // All at once, so each one's timers stop now rather than after the
+    // others have finished.
+    onCancel: () async {
+      final cancelling = [for (final subscription in listening) subscription.cancel()];
+      listening.clear();
+      await Future.wait(cancelling);
+    },
+  );
+  return out.stream;
+}

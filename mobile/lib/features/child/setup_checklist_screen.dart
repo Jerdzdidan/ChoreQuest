@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/device/phone_readiness.dart';
 import '../../core/models/camera.dart';
 import '../../shared/theme.dart';
+import 'network_cameras_screen.dart';
 import 'quest_session_providers.dart';
 
 /// "Ready for alarms" (DV-1), on the child's phone, for the grown-up setting
@@ -51,6 +52,11 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
     });
     unawaited(reporter.refresh());
     unawaited(_askUsb());
+  }
+
+  Future<void> _openNetworkCameras() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NetworkCamerasScreen()));
+    if (mounted) unawaited(ref.read(cameraReporterProvider).refresh());
   }
 
   Future<void> _askUsb() async {
@@ -156,6 +162,12 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
             Text('Cameras', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             _CamerasCard(cameras: _cameras, usbSupported: _usbSupported),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _openNetworkCameras,
+              icon: const Icon(Icons.videocam_rounded),
+              label: const Text('Network cameras (CCTV)'),
+            ),
             if (_note != null) ...[
               const SizedBox(height: 12),
               Semantics(
@@ -312,9 +324,18 @@ class _CamerasCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
                       children: [
-                        Icon(camera.kind == CameraKind.external ? Icons.usb_rounded : Icons.photo_camera_rounded),
+                        Icon(switch (camera.kind) {
+                          CameraKind.phone => Icons.photo_camera_rounded,
+                          CameraKind.external => Icons.usb_rounded,
+                          CameraKind.network => Icons.videocam_rounded,
+                        }),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(camera.label, style: text.bodyLarge)),
+                        Expanded(
+                          child: Text(
+                            camera.connected ? camera.label : '${camera.label}: not answering',
+                            style: text.bodyLarge,
+                          ),
+                        ),
                       ],
                     ),
                   ),

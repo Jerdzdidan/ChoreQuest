@@ -8,6 +8,7 @@ import '../../core/app_files.dart';
 import '../../core/camera/camera_reporter.dart';
 import '../../core/camera/camera_source.dart';
 import '../../core/camera/external_camera_source.dart';
+import '../../core/camera/network_camera_source.dart';
 import '../../core/camera/phone_camera_source.dart';
 import '../../core/camera/phone_session_camera.dart';
 import '../../core/camera/session_camera.dart';
@@ -35,17 +36,27 @@ final sessionCameraProvider = Provider<SessionCamera Function(Assignment assignm
   (ref) => (_) => PhoneSessionCamera(),
 );
 
-/// The phone's own cameras and USB ones (DV-8). Network cameras join with
-/// DV-11.
+/// The phone's own cameras and USB ones (DV-8), and network cameras added
+/// by address (DV-11).
 final phoneCameraSourceProvider = Provider<PhoneCameraSource>((ref) => PhoneCameraSource());
 final externalCameraSourceProvider = Provider<ExternalCameraSource>((ref) => ExternalCameraSource());
+final networkCameraSourceProvider = Provider<NetworkCameraSource>(
+  (ref) => NetworkCameraSource(store: NetworkCameraStore()),
+);
+
+/// A signal whenever any kind of camera may have come or gone.
+final cameraChangesProvider = Provider<Stream<void> Function()>((ref) {
+  final external = ref.watch(externalCameraSourceProvider);
+  final network = ref.watch(networkCameraSourceProvider);
+  return () => anyChange([external.changes, network.changes]);
+});
 
 /// Picks a session's camera: the scheduled third-party one if connected,
 /// otherwise the phone's, with the parent told (DV-12).
 final cameraChooserProvider = Provider<CameraChooser>((ref) {
   final api = ref.watch(childApiProvider);
   return CameraChooser(
-    thirdParty: [ref.watch(externalCameraSourceProvider)],
+    thirdParty: [ref.watch(externalCameraSourceProvider), ref.watch(networkCameraSourceProvider)],
     phone: ref.watch(sessionCameraProvider),
     onMissing: (assignment) => api.reportAlarmEvent('camera_missing', assignment.id),
   );
@@ -56,7 +67,11 @@ final cameraReporterProvider = Provider<CameraReporter>((ref) {
   final api = ref.watch(childApiProvider);
   final keys = DeviceKeyStore(appFile(ref.watch(appFilesProvider), 'device_key'));
   final reporter = CameraReporter(
-    listers: [ref.watch(phoneCameraSourceProvider).list, ref.watch(externalCameraSourceProvider).list],
+    listers: [
+      ref.watch(phoneCameraSourceProvider).list,
+      ref.watch(externalCameraSourceProvider).list,
+      ref.watch(networkCameraSourceProvider).list,
+    ],
     report: (cameras) async => api.reportCameras(await keys.read(), cameras),
   );
   ref.onDispose(reporter.close);

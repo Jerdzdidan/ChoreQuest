@@ -2,7 +2,7 @@ import '../../core/models/submission.dart';
 import '../../core/notifications/app_notifier.dart';
 import 'child_api.dart';
 
-/// Tells a child when a grown-up has decided one of their photos.
+/// Tells a child when a grown-up has decided one of their quests.
 ///
 /// Used only while the app is in the background. On screen, the chore cards
 /// already show the answer.
@@ -17,8 +17,8 @@ class OutcomeWatcher {
   /// then the child has already seen on screen.
   void reset() => _last = null;
 
-  /// Announces each photo whose status changed since the last look, and
-  /// returns whether any photo is still waiting for a grown-up.
+  /// Announces each quest whose status changed since the last look, and
+  /// returns whether any is still waiting for a grown-up.
   Future<bool> look() async {
     final latest = await api.mySubmissions();
     final last = _last;
@@ -38,9 +38,9 @@ class OutcomeWatcher {
   }
 }
 
-/// The notification a child sees when a grown-up decides a photo. Worded the
-/// same gentle way as the result screen: a photo sent back is a request for a
-/// new one, never a failure.
+/// The notification a child sees when a grown-up decides a quest. Worded the
+/// same gentle way as the result screen: a quest sent back is a request to
+/// try again, never a failure.
 AppNotification alertForOutcome(
   Submission s, {
   required SubmissionStatus before,
@@ -49,18 +49,18 @@ AppNotification alertForOutcome(
   final (title, body) = switch (s.status) {
     SubmissionStatus.approved => (
         'Well done!',
-        'A grown-up said yes to $chore.',
+        'A grown-up said yes to $chore. Your reward is waiting!',
       ),
     SubmissionStatus.rejected when before == SubmissionStatus.approved => (
-        "Let's try another photo",
-        'A grown-up checked $chore again and asked for a new photo.',
+        "Let's try that quest again",
+        'A grown-up checked $chore again and asked you to try it once more.',
       ),
     SubmissionStatus.rejected => (
-        "Let's try another photo",
-        'A grown-up asked for a new photo of $chore.',
+        "Let's try that quest again",
+        'A grown-up asked you to try $chore once more.',
       ),
     SubmissionStatus.pending => (
-        'Your photo is waiting',
+        'Your quest is waiting',
         'A grown-up will look at $chore soon.',
       ),
   };

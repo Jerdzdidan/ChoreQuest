@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../core/api/api_client.dart';
@@ -46,6 +48,23 @@ class OutgoingSubmission {
   final double? confidence;
   final String? modelVersion;
   final int? inferenceMs;
+}
+
+/// A finished quest session, ready to send (LS-9).
+class OutgoingSession {
+  const OutgoingSession({
+    required this.clientToken,
+    required this.assignmentId,
+    required this.beforePath,
+    required this.afterPath,
+    required this.evidence,
+  });
+
+  final String clientToken;
+  final int assignmentId;
+  final String beforePath;
+  final String afterPath;
+  final Map<String, Object?> evidence;
 }
 
 /// Everything the child's screens ask of the server, typed.
@@ -161,6 +180,24 @@ class ChildApi {
     });
 
     final body = await _api.post('/submissions', body: form);
+    return SubmitResult(
+      submission: Submission.fromJson(body['submission'] as Map<String, dynamic>),
+      duplicate: body['duplicate'] == true,
+    );
+  }
+
+  /// Sends a finished quest session (BE-2): both photos and the evidence.
+  /// Nothing is credited until a grown-up approves it.
+  Future<SubmitResult> sendSession(OutgoingSession outgoing) async {
+    final form = FormData.fromMap({
+      'assignment_id': outgoing.assignmentId,
+      'client_token': outgoing.clientToken,
+      'evidence': jsonEncode(outgoing.evidence),
+      'before': await MultipartFile.fromFile(outgoing.beforePath, filename: 'before.jpg'),
+      'after': await MultipartFile.fromFile(outgoing.afterPath, filename: 'after.jpg'),
+    });
+
+    final body = await _api.post('/quest-sessions', body: form);
     return SubmitResult(
       submission: Submission.fromJson(body['submission'] as Map<String, dynamic>),
       duplicate: body['duplicate'] == true,

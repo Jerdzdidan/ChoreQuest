@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
+import 'core/app_files.dart';
 import 'core/notifications/local_notifier.dart';
 import 'core/uploads/upload_queue.dart';
 import 'features/child/child_providers.dart';
@@ -34,6 +35,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         uploadQueueProvider.overrideWithValue(uploads),
+        appFilesProvider.overrideWithValue(base),
         if (notifier != null) appNotifierProvider.overrideWithValue(notifier),
       ],
       child: const ChoreQuestApp(),

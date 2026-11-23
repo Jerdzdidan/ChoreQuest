@@ -78,17 +78,27 @@ class UploadSync {
 
   Future<UploadResult> send(PendingUpload upload) async {
     try {
-      final response = await api.submit(
-        OutgoingSubmission(
-          clientToken: upload.clientToken,
-          assignmentId: upload.assignmentId,
-          photoPath: upload.photoPath,
-          label: upload.label,
-          confidence: upload.confidence,
-          modelVersion: upload.modelVersion,
-          inferenceMs: upload.inferenceMs,
-        ),
-      );
+      final response = upload.isSession
+          ? await api.sendSession(
+              OutgoingSession(
+                clientToken: upload.clientToken,
+                assignmentId: upload.assignmentId,
+                beforePath: upload.beforePhotoPath!,
+                afterPath: upload.photoPath,
+                evidence: upload.evidence ?? const {},
+              ),
+            )
+          : await api.submit(
+              OutgoingSubmission(
+                clientToken: upload.clientToken,
+                assignmentId: upload.assignmentId,
+                photoPath: upload.photoPath,
+                label: upload.label,
+                confidence: upload.confidence,
+                modelVersion: upload.modelVersion,
+                inferenceMs: upload.inferenceMs,
+              ),
+            );
       await queue.remove(upload.clientToken);
       return UploadResult(
         upload: upload,

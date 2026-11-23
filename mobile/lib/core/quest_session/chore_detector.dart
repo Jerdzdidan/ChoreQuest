@@ -36,6 +36,14 @@ abstract class ChoreDetector {
   /// The model's name and version, for the evidence.
   String get version;
 
+  /// The mean time the model took per frame so far, in milliseconds, for the
+  /// evidence; null when it does not measure.
+  int? get meanModelMs;
+
+  /// Whether it wants camera frames at all. The fake detector makes its
+  /// signals up and needs none, so no frame is prepared for it.
+  bool get needsFrames;
+
   /// One signal at a time, in order, until [stop].
   Stream<DetectorSignal> get signals;
 

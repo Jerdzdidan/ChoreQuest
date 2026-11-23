@@ -8,6 +8,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
+import '../../core/models/submission.dart';
 import '../../core/notifications/local_notifier.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
@@ -15,6 +16,7 @@ import '../../shared/async_view.dart';
 import '../../shared/format.dart';
 import '../../shared/leveling.dart';
 import '../../shared/theme.dart';
+import 'approval_celebration.dart';
 import 'avatar_screen.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
@@ -56,6 +58,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
   ChildSession? _me;
   UploadSync? _uploads;
   bool _sendingSaved = false;
+  bool _celebrating = false;
 
   var _tab = 0;
 
@@ -90,6 +93,15 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       _ => null,
     };
     _me = me;
+    // A grown-up's yes is celebrated on the child's next look (LS-10), once
+    // per approval: confetti, the quest and the reward, never at sending.
+    ref.listenManual<AsyncValue<List<Submission>>>(
+      mySubmissionsProvider,
+      (previous, next) {
+        if (next.hasValue && me != null) unawaited(_celebrate(me.id, next.requireValue));
+      },
+      fireImmediately: true,
+    );
     if (me != null) _uploads = ref.read(uploadSyncProvider(me.token));
 
     _startPolling();
@@ -101,6 +113,19 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       // prompt.
       unawaited(notifier.requestPermission());
     });
+  }
+
+  Future<void> _celebrate(int childId, List<Submission> mine) async {
+    if (_celebrating) return;
+    _celebrating = true;
+    try {
+      final fresh = await ref.read(celebrationLedgerProvider).takeFresh(childId, mine);
+      if (fresh.isNotEmpty && mounted) await showApprovalCelebration(context, fresh);
+    } catch (_) {
+      // A celebration that cannot be shown is no harm.
+    } finally {
+      _celebrating = false;
+    }
   }
 
   @override

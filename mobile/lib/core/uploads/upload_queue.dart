@@ -80,6 +80,47 @@ class UploadQueue {
     });
   }
 
+  /// A finished quest session (LS-9): both photos copied into the queue's
+  /// own folder, then one entry carrying them and the evidence, under one
+  /// client token, so a retry can never make a second submission.
+  ///
+  /// Enqueueing a token that is already waiting changes nothing.
+  Future<PendingUpload> enqueueSession({
+    required String clientToken,
+    required int childId,
+    required int assignmentId,
+    required String choreName,
+    required String sourceBeforePath,
+    required String sourceAfterPath,
+    required Map<String, Object?> evidence,
+  }) {
+    return _exclusive(() async {
+      final items = await _read();
+      final existing = items.where((u) => u.clientToken == clientToken);
+      if (existing.isNotEmpty) return existing.first;
+
+      await _photos.create(recursive: true);
+      final before = '${_photos.path}$_sep$clientToken-before.jpg';
+      final after = '${_photos.path}$_sep$clientToken-after.jpg';
+      for (final (from, to) in [(sourceBeforePath, before), (sourceAfterPath, after)]) {
+        if (File(from).absolute.path != File(to).absolute.path) await File(from).copy(to);
+      }
+
+      final upload = PendingUpload(
+        clientToken: clientToken,
+        childId: childId,
+        assignmentId: assignmentId,
+        choreName: choreName,
+        photoPath: after,
+        beforePhotoPath: before,
+        evidence: evidence,
+        createdAt: DateTime.now(),
+      );
+      await _write([...items, upload]);
+      return upload;
+    });
+  }
+
   Future<void> recordFailure(String clientToken, String message) {
     return _exclusive(() async {
       final items = await _read();
@@ -90,8 +131,8 @@ class UploadQueue {
     });
   }
 
-  /// Forgets an upload and deletes its photo. Called once the server has
-  /// answered for it, whether it accepted the photo or refused it for good.
+  /// Forgets an upload and deletes its photos. Called once the server has
+  /// answered for it, whether it accepted it or refused it for good.
   Future<void> remove(String clientToken) {
     return _exclusive(() async {
       final items = await _read();
@@ -100,10 +141,12 @@ class UploadQueue {
 
       await _write(items.where((u) => u.clientToken != clientToken).toList());
       for (final upload in leaving) {
-        try {
-          await File(upload.photoPath).delete();
-        } on FileSystemException {
-          // Already gone.
+        for (final path in [upload.photoPath, ?upload.beforePhotoPath]) {
+          try {
+            await File(path).delete();
+          } on FileSystemException {
+            // Already gone.
+          }
         }
       }
     });

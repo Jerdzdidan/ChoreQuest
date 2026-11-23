@@ -8,24 +8,30 @@ import '../../core/models/submission.dart';
 import '../../shared/format.dart';
 import '../../shared/theme.dart';
 import 'child_providers.dart';
-import 'chore_camera_screen.dart';
+import 'live_camera_screen.dart';
 import 'reward_callouts.dart';
 import 'submission_sender.dart';
 
-/// What happened to the photo, told gently.
+/// What happened to the finished quest, told gently.
 ///
-/// A photo the checker could not accept is never framed as the child having
-/// failed or lied: it is "hard to see", and a grown-up can still say yes.
+/// A quest session is never approved here: it is "Sent to your grown-up!",
+/// and the XP, the minutes and the confetti come when the grown-up says yes
+/// (LS-10). Anything sent back is a gentle request to try again, never a
+/// failure.
 class SubmissionResultScreen extends ConsumerWidget {
   const SubmissionResultScreen({
     super.key,
     required this.assignment,
     required this.outcome,
     this.progressBefore,
+    this.fromSession = false,
   });
 
   final Assignment assignment;
   final SendOutcome outcome;
+
+  /// A live quest session rather than an older single photo.
+  final bool fromSession;
 
   /// The child's progress just before the photo was sent, to tell what an
   /// approval unlocked. Null when it had not loaded.
@@ -52,29 +58,34 @@ class SubmissionResultScreen extends ConsumerWidget {
       Sent() when status == SubmissionStatus.rejected => (
           Icons.image_search_rounded,
           colors.saved.ink,
-          "Let's try another photo",
-          "It's hard to see that it's finished. Take a new photo, or ask a "
-              'grown-up to check it.',
+          "Let's try that quest again",
+          "It's hard to see that it's finished. Try again, or ask a grown-up to check it.",
+        ),
+      Sent() when fromSession => (
+          Icons.send_rounded,
+          colors.waiting,
+          'Sent to your grown-up!',
+          "Great job! When they say yes, you'll get your reward.",
         ),
       Sent() => (
           Icons.hourglass_top_rounded,
           colors.waiting,
           'Great job!',
-          'A grown-up will look at your photo soon.',
+          'A grown-up will look at your quest soon.',
         ),
       Refused(:final message) => (
           Icons.info_rounded,
           scheme.primary,
-          'This photo was not sent',
+          'This quest was not sent',
           message,
         ),
       // Why it did not get through is for a grown-up. What the child needs to
-      // know is that the photo is safe and nothing more needs doing.
+      // know is that the quest is safe and nothing more needs doing.
       Queued() => (
           Icons.cloud_upload_rounded,
           colors.saved.ink,
-          'Your photo is saved',
-          'It will send by itself when the phone is online again.',
+          'Your quest is saved',
+          'It will send to your grown-up by itself when the phone is online again.',
         ),
     };
 
@@ -147,11 +158,11 @@ class SubmissionResultScreen extends ConsumerWidget {
                       FilledButton.icon(
                         onPressed: () => Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (_) => ChoreCameraScreen(assignment: assignment),
+                            builder: (_) => QuestSessionScreen(assignment: assignment),
                           ),
                         ),
-                        icon: const Icon(Icons.photo_camera_rounded),
-                        label: const Text('Take another photo'),
+                        icon: const Icon(Icons.replay_rounded),
+                        label: const Text('Try the quest again'),
                       ),
                       const SizedBox(height: 12),
                     ],

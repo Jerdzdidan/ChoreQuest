@@ -36,14 +36,18 @@ class FakeDetector implements ChoreDetector {
   final bool unavailable;
 
   final _signals = StreamController<DetectorSignal>.broadcast();
-  final _clock = Stopwatch();
   Timer? _timer;
   FakeBehaviour? _pinned;
+
+  /// Its own time, counted in ticks of [interval] rather than read from a
+  /// clock, so it runs the same under a test's pretend time as on a phone.
+  var _ticks = 0;
+  Duration get _elapsed => interval * _ticks;
 
   /// What it pretends now: as pinned from the debug panel, otherwise idle
   /// until [startAfter] and the chore after.
   FakeBehaviour get behaviour =>
-      _pinned ?? (_clock.elapsed < startAfter ? FakeBehaviour.idle : FakeBehaviour.doingTheChore);
+      _pinned ?? (_elapsed < startAfter ? FakeBehaviour.idle : FakeBehaviour.doingTheChore);
 
   set behaviour(FakeBehaviour value) => _pinned = value;
 
@@ -54,17 +58,22 @@ class FakeDetector implements ChoreDetector {
   String get version => 'fake-1';
 
   @override
+  int? get meanModelMs => null;
+
+  @override
+  bool get needsFrames => false;
+
+  @override
   Stream<DetectorSignal> get signals => _signals.stream;
 
   @override
   Future<void> start({required int targetClass}) async {
-    _clock
-      ..reset()
-      ..start();
+    _ticks = 0;
     _timer?.cancel();
     _timer = Timer.periodic(interval, (_) {
       if (_signals.isClosed) return;
-      _signals.add(signalFor(behaviour, _clock.elapsed, targetClass));
+      _ticks++;
+      _signals.add(signalFor(behaviour, _elapsed, targetClass));
     });
   }
 
@@ -85,7 +94,6 @@ class FakeDetector implements ChoreDetector {
   @override
   Future<void> stop() async {
     _timer?.cancel();
-    _clock.stop();
-    await _signals.close();
+    if (!_signals.isClosed) await _signals.close();
   }
 }

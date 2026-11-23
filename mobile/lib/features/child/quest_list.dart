@@ -9,7 +9,7 @@ import '../../core/uploads/pending_upload.dart';
 import '../../shared/async_view.dart';
 import 'child_api.dart';
 import 'child_providers.dart';
-import 'chore_camera_screen.dart';
+import 'live_camera_screen.dart';
 import 'chore_card.dart';
 
 /// The photos that decide where each of today's quests stands: those sent,
@@ -42,7 +42,7 @@ class QuestStates {
 /// back so the quest shows where it now stands.
 Future<void> openQuestCamera(BuildContext context, WidgetRef ref, Assignment assignment) async {
   await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => ChoreCameraScreen(assignment: assignment)),
+    MaterialPageRoute(builder: (_) => QuestSessionScreen(assignment: assignment)),
   );
   if (context.mounted) refreshChildData(ref);
 }

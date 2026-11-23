@@ -29,9 +29,9 @@ class CreditsScreen extends StatelessWidget {
             title: 'Kenney',
             licence: 'CC0 1.0 (public domain)',
             url: 'kenney.nl',
-            note: 'Clothing and helmets, the pets, the rugs, wall pictures and '
-                'plants in a child’s room, and the pictures on the story '
-                'chapters.',
+            note: 'The character a child dresses up: its bodies, hair, clothes '
+                'and hats. Also the pets, the rugs, wall pictures and plants '
+                'in a child’s room, and the pictures on the story chapters.',
             items: const [
               'Roguelike Characters',
               'Roguelike / RPG pack',

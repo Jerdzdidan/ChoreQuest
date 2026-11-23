@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
+import '../../core/schedule/next_alarm.dart';
 import '../../shared/avatars.dart';
 import '../../shared/format.dart';
 import '../../shared/inline_error.dart';
+import '../../shared/schedule_text.dart';
 import '../../shared/theme.dart';
 import 'child_detail_screen.dart';
 import 'parent_providers.dart';
@@ -91,6 +93,7 @@ class ChildBoardCard extends ConsumerWidget {
                     button: 'Set weekly cap',
                   ),
                 ],
+                _NextAlarm(childId: child.id),
               ],
             ),
           ),
@@ -138,6 +141,45 @@ class ChildBoardCard extends ConsumerWidget {
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }
+  }
+}
+
+/// The next quest alarm on this child's phone (PS-9): "Next: Mon 4:30 PM —
+/// Sweep the floor". Worked out from the child's saved schedule, so it moves
+/// as soon as the parent edits one.
+class _NextAlarm extends ConsumerWidget {
+  const _NextAlarm({required this.childId});
+
+  final int childId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assignments = ref.watch(assignmentsProvider(childId)).value;
+    if (assignments == null) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    final next = nextQuestAlarm(assignments, now);
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.alarm_rounded, size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              next == null
+                  ? 'No quest alarms set'
+                  : 'Next: ${whenText(next.$2, now, MaterialLocalizations.of(context))} — ${next.$1.chore.name}',
+              style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

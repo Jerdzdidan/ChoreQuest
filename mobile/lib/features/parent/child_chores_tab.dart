@@ -7,6 +7,8 @@ import '../../core/models/chore.dart';
 import '../../shared/async_view.dart';
 import '../../shared/chore_icons.dart';
 import '../../shared/format.dart';
+import '../../shared/schedule_text.dart';
+import '../../shared/verification_tag.dart';
 import 'assign_chore_sheet.dart';
 import 'catalogue_picker_screen.dart';
 import 'parent_providers.dart';
@@ -115,22 +117,12 @@ class _AssignmentTile extends ConsumerWidget {
     final localizations = MaterialLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final perPoint = minutesPerPoint;
-    final due = assignment.dueTime;
-    final scheduled = assignment.scheduledDate;
 
     final details = [
       perPoint == null
           ? pointsLabel(assignment.points)
           : '${pointsLabel(assignment.points)} '
               '(${formatMinutes(assignment.points * perPoint)})',
-      if (assignment.recurrence == Recurrence.daily)
-        'Every day'
-      else if (scheduled != null)
-        'On ${localizations.formatMediumDate(scheduled)}'
-      else
-        'One day',
-      if (due != null)
-        'by ${localizations.formatTimeOfDay(TimeOfDay(hour: due.hour, minute: due.minute))}',
       if (assignment.location != QuestLocation.other) assignment.location.label,
     ].join(' · ');
 
@@ -146,12 +138,12 @@ class _AssignmentTile extends ConsumerWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // PS-9: the schedule in one line, read from what is saved, so it
+            // follows an edit as soon as the list reloads.
+            Text(scheduleLine(assignment.schedule, localizations)),
             Text(details),
-            if (chore.modelVerifiable)
-              Text(
-                'Photo checked automatically',
-                style: TextStyle(color: scheme.primary),
-              ),
+            const SizedBox(height: 4),
+            VerificationTag(chore.verificationMode),
             if (!assignment.isActive)
               Text('Paused', style: TextStyle(color: scheme.tertiary)),
           ],

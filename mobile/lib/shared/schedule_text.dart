@@ -37,6 +37,23 @@ String shortDate(DateTime date) => '${weekdayShort[date.weekday]} ${date.day} ${
 String alarmText(ClockTime time, MaterialLocalizations localizations) =>
     localizations.formatTimeOfDay(TimeOfDay(hour: time.hour, minute: time.minute));
 
+/// When an alarm rings, as the Board says it: "Today 4:30 PM", "Tomorrow
+/// 7:00 AM", or the weekday, "Mon 4:30 PM", seen from [now].
+String whenText(DateTime at, DateTime now, MaterialLocalizations localizations) {
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(at.year, at.month, at.day);
+  // Rounded, so a day an hour short or long for daylight saving still counts
+  // as one day.
+  final days = (day.difference(today).inHours / 24).round();
+  final time = alarmText(ClockTime(at.hour, at.minute), localizations);
+  return switch (days) {
+    0 => 'Today $time',
+    1 => 'Tomorrow $time',
+    _ when days < 7 => '${weekdayShort[at.weekday]} $time',
+    _ => '${shortDate(at)} $time',
+  };
+}
+
 /// One line for a quest's schedule in the parent's lists (PS-9), such as
 /// "Mon Wed Fri · 4:30 PM · Phone camera" or "Sat 21 Nov · 9:00 AM". A
 /// one-time quest names no camera, since it always uses the phone.

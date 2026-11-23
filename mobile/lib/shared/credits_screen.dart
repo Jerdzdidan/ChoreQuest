@@ -31,13 +31,15 @@ class CreditsScreen extends StatelessWidget {
             url: 'kenney.nl',
             note: 'The character a child dresses up: its bodies, hair, clothes '
                 'and hats. Also the pets, the rugs, wall pictures and plants '
-                'in a child’s room, and the pictures on the story chapters.',
+                'in a child’s room, the pictures on the story chapters, and '
+                'the alarm sounds.',
             items: const [
               'Roguelike Characters',
               'Roguelike / RPG pack',
               'Roguelike Indoor pack',
               'Animal Pack Redux',
               'Emotes pack',
+              '85 Short music jingles',
             ],
           ),
           const SizedBox(height: 20),

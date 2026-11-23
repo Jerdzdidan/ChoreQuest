@@ -7,6 +7,7 @@ environment:
   sdk: ^3.13.2
 
 dependencies:
+  audioplayers: 6.8.1
   camera: ^0.12.1
   confetti: ^0.8.0
   dio: ^5.11.1
@@ -36,3 +37,5 @@ flutter:
     - assets/cosmetics/plants/
     - assets/cosmetics/chapters/
     - assets/badges/
+    # Alarm sounds (PS-8): Kenney's "85 Short music jingles", CC0.
+    - assets/ringtones/

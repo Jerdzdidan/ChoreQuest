@@ -6,33 +6,52 @@ import '../../core/models/chore.dart';
 import '../../shared/async_view.dart';
 import '../../shared/chore_icons.dart';
 import '../../shared/format.dart';
+import '../../shared/verification_tag.dart';
 import 'assign_chore_sheet.dart';
+import 'category_dropdown.dart';
 import 'parent_providers.dart';
 
-/// The catalogue, already filtered by the server to this child's age.
-class CataloguePickerScreen extends ConsumerWidget {
+/// The catalogue, already filtered by the server to this child's age: a
+/// category first (PS-1), then that category's chores, or the parent's own
+/// custom chores behind their warning (PS-2).
+class CataloguePickerScreen extends ConsumerStatefulWidget {
   const CataloguePickerScreen({super.key, required this.child});
 
   final ChildProfile child;
 
-  Future<void> _assign(BuildContext context, ChoreTemplate template) async {
+  @override
+  ConsumerState<CataloguePickerScreen> createState() => _CataloguePickerScreenState();
+}
+
+class _CataloguePickerScreenState extends ConsumerState<CataloguePickerScreen> {
+  String? _category;
+
+  ChildProfile get child => widget.child;
+
+  Future<void> _assign(ChoreTemplate template) async {
     final assigned = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => AssignChoreSheet(child: child, template: template),
     );
-    if (assigned == true && context.mounted) Navigator.of(context).pop();
+    if (assigned == true && mounted) Navigator.of(context).pop();
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final catalogue = ref.watch(catalogueProvider(child.id));
     final assignments = ref.watch(assignmentsProvider(child.id));
     final assignedLocations = assignments.hasValue
         ? {for (final a in assignments.requireValue) a.chore.id: a.location}
         : <int, QuestLocation>{};
     final scheme = Theme.of(context).colorScheme;
+
+    Widget tile(ChoreTemplate template) => _TemplateTile(
+          template: template,
+          assignedAt: assignedLocations[template.id],
+          onTap: () => _assign(template),
+        );
 
     return Scaffold(
       appBar: AppBar(title: Text('Chores for ${child.name}')),
@@ -47,21 +66,32 @@ class CataloguePickerScreen extends ConsumerWidget {
           AsyncView<ChoreCatalogue>(
             value: catalogue,
             onRetry: () => ref.invalidate(catalogueProvider(child.id)),
-            builder: (context, catalogue) => catalogue.chores.isEmpty
-                ? Text(
-                    'No chores in the catalogue suit age ${child.age}. '
-                    'ChoreQuest covers ages 4 to 10.',
-                  )
-                : Column(
-                    children: [
-                      for (final template in catalogue.chores)
-                        _TemplateTile(
-                          template: template,
-                          assignedAt: assignedLocations[template.id],
-                          onTap: () => _assign(context, template),
-                        ),
-                    ],
+            builder: (context, catalogue) {
+              final category = _category ?? firstCategoryWith(catalogue.categories, catalogue.chores);
+              final shown = inCategory(catalogue.chores, category);
+              final name = catalogue.categories.where((c) => c.key == category).firstOrNull?.name ?? 'this category';
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CategoryDropdown(
+                    categories: catalogue.categories,
+                    value: category,
+                    onChanged: (key) => setState(() => _category = key),
                   ),
+                  const SizedBox(height: 12),
+                  if (category == ChoreCategory.custom)
+                    CustomChoresSection(chores: shown, tile: tile, onMade: _assign)
+                  else if (shown.isEmpty)
+                    Text(
+                      'Nothing in $name suits age ${child.age}. Try another category.',
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    )
+                  else
+                    for (final template in shown) tile(template),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -117,11 +147,7 @@ class _TemplateTile extends StatelessWidget {
                       runSpacing: 4,
                       children: [
                         _Tag(label: pointsLabel(template.defaultPoints)),
-                        if (template.modelVerifiable)
-                          _Tag(
-                            label: 'Checked automatically',
-                            colour: scheme.primaryContainer,
-                          ),
+                        VerificationTag(template.verificationMode),
                         if (place != null)
                           _Tag(
                             label: place == QuestLocation.other

@@ -41,6 +41,9 @@ const _icons = <String, IconData>{
   'bird': Icons.flutter_dash,
 };
 
+/// Every picture a chore can have, for a parent making up their own (PS-2).
+Iterable<String> get choreIconKeys => _icons.keys;
+
 /// Background and foreground per category, as a pale fill with a deep ink so
 /// the icon holds its contrast.
 const _categoryColours = <String, (Color, Color)>{

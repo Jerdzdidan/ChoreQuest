@@ -71,6 +71,9 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
 
     // The age-graded catalogue. ?child_id= filters it to that child's band.
     Route::get('/chores', [ChoreTemplateController::class, 'index']);
+    // A chore the parent makes up (PS-2): seen only by them, checked only
+    // by them.
+    Route::post('/chores/custom', [ChoreTemplateController::class, 'storeCustom']);
 
     // Assignments: which chores this child has, for how many points, when.
     Route::get('/assignments', [AssignmentController::class, 'index']);

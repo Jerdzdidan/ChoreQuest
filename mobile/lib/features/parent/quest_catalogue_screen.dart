@@ -8,7 +8,9 @@ import '../../shared/difficulty_xp.dart';
 import '../../shared/format.dart';
 import '../../shared/quest_places.dart';
 import '../../shared/theme.dart';
+import '../../shared/verification_tag.dart';
 import 'assign_chore_sheet.dart';
+import 'category_dropdown.dart';
 import 'parent_providers.dart';
 
 /// The catalogue grouped by the place each chore usually happens, in map
@@ -27,8 +29,9 @@ List<(QuestLocation, List<ChoreTemplate>)> catalogueByPlace(List<ChoreTemplate> 
 }
 
 /// Every chore in the catalogue, for a parent who wants to see them all
-/// (PQ1): grouped by place, searchable, and each one tap away from being
-/// given to one child or several (BD3).
+/// (PQ1): a category first (PS-1), its chores grouped by place, and each one
+/// tap away from being given to one child or several (BD3). A search looks
+/// through every category at once, whichever is chosen.
 ///
 /// The Board's short list of suggestions (BD2) is separate; this is the whole
 /// catalogue, every age.
@@ -45,6 +48,7 @@ class QuestCatalogueScreen extends ConsumerStatefulWidget {
 class _QuestCatalogueScreenState extends ConsumerState<QuestCatalogueScreen> {
   final _search = TextEditingController();
   var _query = '';
+  String? _category;
 
   @override
   void dispose() {
@@ -105,24 +109,61 @@ class _QuestCatalogueScreenState extends ConsumerState<QuestCatalogueScreen> {
             onRetry: () => ref.invalidate(fullCatalogueProvider),
             builder: (context, catalogue) {
               final all = catalogue.chores;
-              final groups = catalogueByPlace(all, _query);
+              final category = _category ?? firstCategoryWith(catalogue.categories, all);
+              final searching = _query.trim().isNotEmpty;
+              final dropdown = CategoryDropdown(
+                categories: catalogue.categories,
+                value: category,
+                onChanged: (key) => setState(() => _category = key),
+              );
+
+              if (!searching && category == ChoreCategory.custom) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    dropdown,
+                    const SizedBox(height: 12),
+                    CustomChoresSection(
+                      chores: inCategory(all, category),
+                      tile: (template) => _CatalogueTile(template: template, onTap: () => _assign(template)),
+                      onMade: _assign,
+                    ),
+                  ],
+                );
+              }
+
+              final groups = searching ? catalogueByPlace(all, _query) : catalogueByPlace(inCategory(all, category), '');
               final shown = groups.fold<int>(0, (sum, group) => sum + group.$2.length);
               if (groups.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
-                  child: Text(
-                    all.isEmpty ? 'The catalogue is empty.' : 'No quests match "${_query.trim()}".',
-                    textAlign: TextAlign.center,
-                    style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    dropdown,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Text(
+                        all.isEmpty
+                            ? 'The catalogue is empty.'
+                            : searching
+                                ? 'No quests match "${_query.trim()}".'
+                                : 'Nothing in this category yet.',
+                        textAlign: TextAlign.center,
+                        style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
                 );
               }
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  dropdown,
+                  const SizedBox(height: 8),
                   Text(
-                    _query.trim().isEmpty ? '$shown quests. Tap one to assign it.' : '$shown of ${all.length} quests',
+                    searching
+                        ? '$shown of ${all.length} quests, from every category'
+                        : '$shown quests. Tap one to assign it.',
                     style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                   for (final (place, templates) in groups) ...[
@@ -218,13 +259,7 @@ class _CatalogueTile extends StatelessWidget {
                         _Tag(label: template.difficulty.label, icon: tier.icon, fill: tier.background, ink: tier.ink),
                         _Tag(label: pointsLabel(template.defaultPoints)),
                         _Tag(label: 'Ages ${template.minAge}–${template.maxAge}'),
-                        if (template.modelVerifiable)
-                          _Tag(
-                            label: 'Checked automatically',
-                            icon: Icons.photo_camera_rounded,
-                            fill: scheme.primaryContainer,
-                            ink: scheme.onPrimaryContainer,
-                          ),
+                        VerificationTag(template.verificationMode),
                       ],
                     ),
                   ],

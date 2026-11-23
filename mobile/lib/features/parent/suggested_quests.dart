@@ -7,6 +7,7 @@ import '../../shared/chore_icons.dart';
 import '../../shared/difficulty_xp.dart';
 import '../../shared/format.dart';
 import 'assign_chore_sheet.dart';
+import 'category_dropdown.dart';
 import 'parent_providers.dart';
 import 'quest_catalogue_screen.dart';
 
@@ -38,9 +39,17 @@ final suggestedQuestsProvider = FutureProvider.autoDispose<List<ChoreTemplate>>(
 });
 
 /// A short list of chores nobody has yet, each one tap from being given to
-/// one child or several (BD3). The whole catalogue is a tap away (PQ1).
-class SuggestedQuests extends ConsumerWidget {
+/// one child or several (BD3), a category at a time (PS-1). The whole
+/// catalogue is a tap away (PQ1).
+class SuggestedQuests extends ConsumerStatefulWidget {
   const SuggestedQuests({super.key});
+
+  @override
+  ConsumerState<SuggestedQuests> createState() => _SuggestedQuestsState();
+}
+
+class _SuggestedQuestsState extends ConsumerState<SuggestedQuests> {
+  String? _category;
 
   Future<void> _give(BuildContext context, WidgetRef ref, ChoreTemplate template) async {
     final assigned = await showModalBottomSheet<bool>(
@@ -57,8 +66,9 @@ class SuggestedQuests extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final suggestions = ref.watch(suggestedQuestsProvider);
+    final categories = ref.watch(fullCatalogueProvider).value?.categories ?? const <ChoreCategory>[];
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
@@ -80,30 +90,46 @@ class SuggestedQuests extends ConsumerWidget {
         AsyncView<List<ChoreTemplate>>(
           value: suggestions,
           onRetry: () => ref.invalidate(suggestedQuestsProvider),
-          builder: (context, all) {
-            if (all.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Every chore in the catalogue is already given out.',
-                  style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              );
-            }
+          builder: (context, everything) {
+            final category = _category ?? firstCategoryWith(categories, everything);
+            final all = inCategory(everything, category);
+            Widget tile(ChoreTemplate template) =>
+                _SuggestionTile(template: template, onGive: () => _give(context, ref, template));
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final template in all.take(suggestedQuestCount))
-                  _SuggestionTile(template: template, onGive: () => _give(context, ref, template)),
-                if (all.length > suggestedQuestCount)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '${all.length - suggestedQuestCount} more in the catalogue.',
-                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
+                if (categories.isNotEmpty) ...[
+                  CategoryDropdown(
+                    categories: categories,
+                    value: category,
+                    onChanged: (key) => setState(() => _category = key),
                   ),
+                  const SizedBox(height: 8),
+                ],
+                if (category == ChoreCategory.custom)
+                  CustomChoresSection(chores: all, tile: tile, onMade: (made) => _give(context, ref, made))
+                else if (all.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      everything.isEmpty
+                          ? 'Every chore in the catalogue is already given out.'
+                          : 'Every chore in this category is already given out.',
+                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  )
+                else ...[
+                  for (final template in all.take(suggestedQuestCount)) tile(template),
+                  if (all.length > suggestedQuestCount)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${all.length - suggestedQuestCount} more in this category.',
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                ],
               ],
             );
           },

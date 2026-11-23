@@ -69,6 +69,28 @@ class ParentApi {
   Future<ChoreCatalogue> catalogue() async =>
       ChoreCatalogue.fromJson(await _api.get('/chores'));
 
+  /// Makes a chore up (PS-2): only this parent sees it, and only the parent
+  /// checks it. Its points and XP follow from [difficulty].
+  Future<ChoreTemplate> createCustomChore({
+    required String name,
+    String? description,
+    required String icon,
+    required QuestLocation location,
+    required QuestDifficulty difficulty,
+  }) async {
+    final body = await _api.post(
+      '/chores/custom',
+      body: {
+        'name': name,
+        'description': description,
+        'icon': icon,
+        'location': location.name,
+        'difficulty': difficulty.name,
+      },
+    );
+    return ChoreTemplate.fromJson(body['chore'] as Map<String, dynamic>);
+  }
+
   /// Only the chores suited to this child's age, with the categories.
   Future<ChoreCatalogue> catalogueFor(int childId) async =>
       ChoreCatalogue.fromJson(await _api.get('/chores', query: {'child_id': childId}));

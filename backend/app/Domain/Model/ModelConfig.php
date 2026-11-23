@@ -46,10 +46,17 @@ final class ModelConfig
         self::$data = null;
     }
 
-    /** What a phone receives: everything but the note to whoever edits it. */
+    /**
+     * What a phone receives: everything but the note to whoever edits it.
+     * The per-chore map stays a JSON object even when empty; PHP would
+     * otherwise send an empty one as a list.
+     */
     public static function forPhones(): array
     {
-        return array_diff_key(self::all(), ['_about' => true]);
+        $config = array_diff_key(self::all(), ['_about' => true]);
+        $config['chores'] = (object) ($config['chores'] ?? []);
+
+        return $config;
     }
 
     /** @return array{probability: float, active_seconds: int, scene_change: float} */

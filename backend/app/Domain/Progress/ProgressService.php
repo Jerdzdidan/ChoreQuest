@@ -26,6 +26,7 @@ class ProgressService
     public function __construct(
         private readonly StreakCalculator $streaks,
         private readonly CompletionRate $completionRate,
+        private readonly MissedQuests $missedQuests,
     ) {
     }
 
@@ -51,16 +52,7 @@ class ProgressService
             $dates[] = $day->format('Y-m-d');
         }
 
-        $assignments = $child->assignments()->get()
-            ->map(fn ($assignment) => [
-                'id' => (int) $assignment->id,
-                'recurrence' => (string) $assignment->recurrence,
-                'scheduled_date' => $assignment->scheduled_date?->toDateString(),
-                'created_on' => $assignment->created_at->copy()->setTimezone($timezone)->toDateString(),
-                'active' => (bool) $assignment->is_active,
-                'days_of_week' => $assignment->days_of_week,
-            ])
-            ->all();
+        $assignments = $this->assignmentRows($child, $timezone);
 
         $approved = $child->submissions()
             ->where('status', Decision::APPROVED)
@@ -75,6 +67,55 @@ class ProgressService
             ->all();
 
         return ['days' => $days] + $this->completionRate->over($assignments, $approved, $dates);
+    }
+
+    /**
+     * The quests a child missed on $day, a household date (MissedQuests,
+     * LS-12): due, and nothing sent for that day. Read as the assignments
+     * stand now, like the completion rate.
+     *
+     * @return list<array{assignment_id: int, chore: ?string}>
+     */
+    public function missedOn(Child $child, string $day): array
+    {
+        $timezone = $child->parent?->timezone ?: User::DEFAULT_TIMEZONE;
+        $sent = $child->submissions()
+            ->whereDate('for_date', $day)
+            ->get(['assignment_id', 'for_date'])
+            ->map(fn ($submission) => [
+                'assignment_id' => (int) $submission->assignment_id,
+                'for_date' => $submission->for_date instanceof DateTimeInterface
+                    ? $submission->for_date->format('Y-m-d')
+                    : substr((string) $submission->for_date, 0, 10),
+            ])
+            ->all();
+        $missed = $this->missedQuests->on($this->assignmentRows($child, $timezone), $sent, $day);
+        if ($missed === []) {
+            return [];
+        }
+        $names = $child->assignments()->with('template')->whereIn('id', $missed)->get()
+            ->mapWithKeys(fn ($assignment) => [$assignment->id => $assignment->template?->name]);
+
+        return array_map(fn (int $id) => ['assignment_id' => $id, 'chore' => $names[$id] ?? null], $missed);
+    }
+
+    /**
+     * A child's assignments as CompletionRate and MissedQuests take them.
+     *
+     * @return list<array{id: int, recurrence: string, scheduled_date: ?string, created_on: string, active: bool, days_of_week: ?list<int>}>
+     */
+    private function assignmentRows(Child $child, string $timezone): array
+    {
+        return $child->assignments()->get()
+            ->map(fn ($assignment) => [
+                'id' => (int) $assignment->id,
+                'recurrence' => (string) $assignment->recurrence,
+                'scheduled_date' => $assignment->scheduled_date?->toDateString(),
+                'created_on' => $assignment->created_at->copy()->setTimezone($timezone)->toDateString(),
+                'active' => (bool) $assignment->is_active,
+                'days_of_week' => $assignment->days_of_week,
+            ])
+            ->all();
     }
 
     /**

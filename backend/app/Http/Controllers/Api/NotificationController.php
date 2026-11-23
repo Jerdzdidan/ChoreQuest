@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Model\ModelConfig;
+use App\Domain\Progress\ProgressService;
 use App\Domain\Verification\Routing;
 use App\Http\Controllers\Controller;
 use App\Models\AlarmEvent;
 use App\Models\Submission;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -32,11 +34,12 @@ use Illuminate\Http\Request;
  *
  * Whether it still waits for a grown-up is its status, sent alongside. Alarm
  * events (an alarm a grown-up stopped, one that timed out, a camera that was
- * missing) come in their own list.
+ * missing) come in their own list, and so do yesterday's missed quests
+ * (LS-12), which are never unread: they are a note, not news.
  */
 class NotificationController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ProgressService $progress): JsonResponse
     {
         $parent = $request->user();
         $childIds = $parent->children()->pluck('id');
@@ -79,7 +82,34 @@ class NotificationController extends Controller
                 'at' => $e->created_at->toIso8601String(),
                 'unread' => $seenAt === null || $e->created_at->greaterThan($seenAt),
             ])->all(),
+            'missed' => $this->missedYesterday($parent, $progress),
         ]);
+    }
+
+    /**
+     * Each child's quests missed yesterday, in the household's own day
+     * (LS-12): said gently the next day, and never counted against anyone.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function missedYesterday(User $parent, ProgressService $progress): array
+    {
+        $out = [];
+        foreach ($parent->children()->orderBy('id')->get() as $child) {
+            $yesterday = $child->localNow()->subDay()->toDateString();
+            foreach ($progress->missedOn($child, $yesterday) as $missed) {
+                $out[] = [
+                    'child_id' => $child->id,
+                    'child_name' => $child->name,
+                    'child_avatar' => $child->avatar,
+                    'assignment_id' => $missed['assignment_id'],
+                    'chore' => $missed['chore'],
+                    'for_date' => $yesterday,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     /**

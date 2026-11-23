@@ -119,10 +119,38 @@ class AlarmNotification {
   final bool unread;
 }
 
-/// The feed: the latest quests, the alarm events, and how many arrived
-/// unseen.
+/// A quest a child missed yesterday (LS-12): due, and nothing sent for it.
+/// Said gently, the next day; nothing is taken away for it.
+class MissedQuest {
+  const MissedQuest({
+    required this.childId,
+    required this.childName,
+    required this.assignmentId,
+    required this.chore,
+    required this.forDate,
+  });
+
+  factory MissedQuest.fromJson(Map<String, dynamic> json) => MissedQuest(
+        childId: json['child_id'] as int,
+        childName: json['child_name'] as String? ?? 'Your child',
+        assignmentId: json['assignment_id'] as int,
+        chore: json['chore'] as String?,
+        forDate: json['for_date'] as String,
+      );
+
+  final int childId;
+  final String childName;
+  final int assignmentId;
+  final String? chore;
+
+  /// The household's date it was missed on.
+  final String forDate;
+}
+
+/// The feed: the latest quests, the alarm events, yesterday's missed quests,
+/// and how many arrived unseen.
 class NotificationFeed {
-  const NotificationFeed({required this.items, required this.unreadCount, this.alarms = const []});
+  const NotificationFeed({required this.items, required this.unreadCount, this.alarms = const [], this.missed = const []});
 
   factory NotificationFeed.fromJson(Map<String, dynamic> json) =>
       NotificationFeed(
@@ -135,10 +163,15 @@ class NotificationFeed {
           for (final raw in (json['alarms'] as List? ?? const []).cast<Map<String, dynamic>>())
             AlarmNotification.fromJson(raw),
         ],
+        missed: [
+          for (final raw in (json['missed'] as List? ?? const []).cast<Map<String, dynamic>>())
+            MissedQuest.fromJson(raw),
+        ],
         unreadCount: json['unread_count'] as int? ?? 0,
       );
 
   final List<ParentNotification> items;
   final List<AlarmNotification> alarms;
+  final List<MissedQuest> missed;
   final int unreadCount;
 }

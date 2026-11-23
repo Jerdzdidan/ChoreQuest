@@ -41,7 +41,7 @@ final class CompletionRate
         $done = 0;
         foreach ($days as $day) {
             foreach ($assignments as $assignment) {
-                if (! $this->dueOn($assignment, $day)) {
+                if (! self::dueOn($assignment, $day)) {
                     continue;
                 }
                 $due++;
@@ -55,9 +55,12 @@ final class CompletionRate
     }
 
     /**
+     * Whether the child's app would have listed the assignment on $day; the
+     * rule MissedQuests counts with too.
+     *
      * @param  array{id: int, recurrence: string, scheduled_date: ?string, created_on: string, active: bool, days_of_week?: ?list<int>}  $assignment
      */
-    private function dueOn(array $assignment, string $day): bool
+    public static function dueOn(array $assignment, string $day): bool
     {
         if (! $assignment['active']) {
             return false;

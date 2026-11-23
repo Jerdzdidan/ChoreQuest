@@ -104,7 +104,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     return byUrgency != 0 ? byUrgency : a.$1.compareTo(b.$1);
                   });
                 final rest = [for (final n in loaded.items) if (!n.waitsForReview) n];
-                if (loaded.items.isEmpty && loaded.alarms.isEmpty) return const _NoPhotos();
+                if (loaded.items.isEmpty && loaded.alarms.isEmpty && loaded.missed.isEmpty) return const _NoPhotos();
+                final missedByChild = <int, List<MissedQuest>>{};
+                for (final m in loaded.missed) {
+                  missedByChild.putIfAbsent(m.childId, () => []).add(m);
+                }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,6 +126,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       Text('Alarms', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 8),
                       for (final alarm in loaded.alarms) _AlarmTile(alarm: alarm),
+                      const SizedBox(height: 12),
+                    ],
+                    if (missedByChild.isNotEmpty) ...[
+                      Text('Yesterday', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
+                      for (final missed in missedByChild.values) _MissedTile(missed: missed),
                       const SizedBox(height: 12),
                     ],
                     if (rest.isNotEmpty) ...[
@@ -367,6 +377,52 @@ class _AlarmTile extends StatelessWidget {
                   Text(line, style: text.bodyMedium?.copyWith(color: tint.ink, fontWeight: alarm.unread ? FontWeight.w700 : null)),
                   const SizedBox(height: 2),
                   Text(sentLabel(context, alarm.at), style: text.bodySmall?.copyWith(color: tint.ink)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One child's quests missed yesterday (LS-12), said gently: a note for the
+/// parent, never a penalty for the child.
+class _MissedTile extends StatelessWidget {
+  const _MissedTile({required this.missed});
+
+  final List<MissedQuest> missed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final chores = [for (final m in missed) m.chore ?? 'a quest'];
+    final list = switch (chores.length) {
+      1 => chores.single,
+      2 => '${chores[0]} and ${chores[1]}',
+      _ => '${chores.sublist(0, chores.length - 1).join(', ')} and ${chores.last}',
+    };
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: scheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.event_busy_rounded, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("${missed.first.childName} didn't get to $list.",
+                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 2),
+                  Text('Nothing is taken away for a missed quest.',
+                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                 ],
               ),
             ),

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../../core/models/api_dates.dart';
 import '../../core/models/balance.dart';
+import '../../core/models/camera.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/family_quest.dart';
 import '../../core/models/chore.dart';
@@ -106,6 +107,23 @@ class ChildApi {
   /// Puts on an item the child owns, taking off whatever else was on in that
   /// category. Refused with a field error on `key` when the child has not
   /// unlocked it.
+  /// Tells the server every camera this phone can see right now, replacing
+  /// what it said before (BE-8, DV-9). The parent's phone offers a
+  /// third-party camera only while one is reported as connected.
+  Future<List<ReportedCamera>> reportCameras(String deviceKey, List<ReportedCamera> cameras) async {
+    final body = await _api.post(
+      '/my/cameras',
+      body: {
+        'device_key': deviceKey,
+        'cameras': [for (final camera in cameras) camera.toJson()],
+      },
+    );
+    return [
+      for (final raw in (body['cameras'] as List? ?? const []).cast<Map<String, dynamic>>())
+        ReportedCamera.fromJson(raw),
+    ];
+  }
+
   Future<Wardrobe> equip(CosmeticCategory category, String key) async =>
       Wardrobe.fromJson(
         await _api.patch(

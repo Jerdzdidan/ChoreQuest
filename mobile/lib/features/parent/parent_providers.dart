@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/allocation_rule.dart';
+import '../../core/models/camera.dart';
 import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/parent_notification.dart';
@@ -38,6 +39,11 @@ final fullCatalogueProvider = FutureProvider.autoDispose<ChoreCatalogue>(
 final catalogueProvider =
     FutureProvider.autoDispose.family<ChoreCatalogue, int>(
   (ref, childId) => ref.watch(parentApiProvider).catalogueFor(childId),
+);
+
+/// The third-party cameras connected to a child's phone (PS-6, BE-8).
+final childCamerasProvider = FutureProvider.autoDispose.family<List<ReportedCamera>, int>(
+  (ref, childId) => ref.watch(parentApiProvider).childCameras(childId),
 );
 
 final ruleProvider = FutureProvider.autoDispose.family<AllocationRule, int>(

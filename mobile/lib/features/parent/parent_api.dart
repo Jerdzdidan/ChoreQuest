@@ -1,6 +1,7 @@
 import '../../core/api/api_client.dart';
 import '../../core/models/allocation_rule.dart';
 import '../../core/models/api_dates.dart';
+import '../../core/models/camera.dart';
 import '../../core/models/child_activity.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/chore.dart';
@@ -235,6 +236,13 @@ class ParentApi {
 
   Future<ScreenTimeReport> report(int childId) async =>
       ScreenTimeReport.fromJson(await _api.get('/children/$childId/report'));
+
+  /// The third-party cameras connected to this child's phone right now
+  /// (BE-8). Empty means the Third-party camera option is greyed out.
+  Future<List<ReportedCamera>> childCameras(int childId) async {
+    final body = await _api.get('/children/$childId/cameras');
+    return _list(body['cameras'], ReportedCamera.fromJson);
+  }
 
   static List<T> _list<T>(
     Object? raw,

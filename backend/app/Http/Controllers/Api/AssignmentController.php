@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\Child;
 use App\Models\ChoreTemplate;
+use App\Models\DeviceCamera;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -73,7 +74,7 @@ class AssignmentController extends Controller
             // Where in the home it happens, chosen by the parent. Without one,
             // the quest is grouped under "other" on the child's map.
             'location' => $data['location'] ?? 'other',
-            ...$this->schedule($data),
+            ...$this->schedule($data, $child),
         ]);
 
         return response()->json(['assignment' => $this->payload($assignment->load('template'))], 201);
@@ -112,7 +113,7 @@ class AssignmentController extends Controller
                 'camera_source' => $assignment->camera_source,
                 'camera_device_id' => $assignment->camera_device_id,
                 'alarm_enabled' => $assignment->alarm_enabled,
-            ]);
+            ], $assignment->child, $assignment->camera_device_id);
         }
 
         $assignment->update($rest);
@@ -174,12 +175,16 @@ class AssignmentController extends Controller
      * The stored schedule for what was sent, with the rules that hold across
      * fields: a one-time quest needs its date, has no weekdays and always
      * uses the phone camera (the parent sees no camera control for it); a
-     * daily quest has no date; a third-party camera must be named.
+     * daily quest has no date; a third-party camera must be named, and be
+     * one the child's phone has reported (BE-8). A camera already on the
+     * assignment is kept even if the phone no longer lists it, so editing
+     * the alarm never fails over it; the session falls back to the phone
+     * camera when it is missing (DV-12).
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function schedule(array $data): array
+    private function schedule(array $data, Child $child, ?string $currentCamera = null): array
     {
         $recurrence = $data['recurrence'] ?? 'daily';
 
@@ -196,6 +201,14 @@ class AssignmentController extends Controller
         if ($camera === Assignment::CAMERA_EXTERNAL && empty($data['camera_device_id'])) {
             throw ValidationException::withMessages([
                 'camera_device_id' => ['Choose which third-party camera to use.'],
+            ]);
+        }
+
+        if ($camera === Assignment::CAMERA_EXTERNAL
+            && $data['camera_device_id'] !== $currentCamera
+            && ! DeviceCamera::where('child_id', $child->id)->thirdParty()->where('camera_key', $data['camera_device_id'])->exists()) {
+            throw ValidationException::withMessages([
+                'camera_device_id' => ["That camera has not been connected to {$child->name}'s phone."],
             ]);
         }
 

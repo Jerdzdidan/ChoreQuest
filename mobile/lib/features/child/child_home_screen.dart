@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/alarm/alarm_safety_net.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/device/phone_readiness.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
@@ -34,6 +35,7 @@ import 'quest_map.dart';
 import 'quest_session_providers.dart';
 import 'reward_track_screen.dart';
 import 'screen_time_sheet.dart';
+import 'setup_checklist_screen.dart';
 import 'upload_sync.dart';
 
 /// The child's side of the app, in four tabs (N1): Map, with their progress,
@@ -68,6 +70,10 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
   StreamSubscription<Set<int>>? _ringing;
   final _ringScreens = <int>{};
   final _ringTimeouts = <int, Timer>{};
+
+  /// The last "ready for alarms" check on this phone (DV-1).
+  ReadinessResult? _readiness;
+  var _offeredChecklist = false;
 
   var _tab = 0;
 
@@ -116,8 +122,9 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     _startPolling();
     // The alarms follow the schedule: fetched, saved and armed now and at
     // every return to the app (DV-3); the background task does the same
-    // while the app is closed.
-    unawaited(_syncSchedule());
+    // while the app is closed. The phone's readiness is checked after, so its
+    // report carries the sync just made (DV-10).
+    unawaited(_syncSchedule().then((_) => _checkReadiness()));
     _ringing = ref.read(questAlarmServiceProvider).backend.ringing.listen(_onRinging, onError: (_) {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Photos saved while the app was closed go as soon as it opens.
@@ -148,6 +155,27 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     } catch (_) {
       // Offline or unhappy: the saved schedule stays armed.
     }
+  }
+
+  /// Checks what alarms need on this phone and reports it (DV-1, DV-10). The
+  /// first check on a phone opens the checklist, while the grown-up who set
+  /// it up is likely still there.
+  Future<void> _checkReadiness() async {
+    final outcome = await ref.read(phoneReadinessProvider).refresh();
+    if (!mounted || outcome == null) return;
+    setState(() => _readiness = outcome.result);
+    // Once, even if the phone could not keep the result.
+    if (outcome.firstRun && !_offeredChecklist) {
+      _offeredChecklist = true;
+      await _openChecklist();
+    }
+  }
+
+  Future<void> _openChecklist() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => SetupChecklistScreen(initial: _readiness)),
+    );
+    if (mounted) await _checkReadiness();
   }
 
   /// A quest alarm started ringing: open its ring page over whatever is on
@@ -255,7 +283,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       _away?.cancel();
       refreshChildData(ref);
       unawaited(_sendSaved());
-      unawaited(_syncSchedule());
+      unawaited(_syncSchedule().then((_) => _checkReadiness()));
       _startPolling();
     } else if (state == AppLifecycleState.paused) {
       _poll?.cancel();
@@ -433,6 +461,12 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
+          // First, while any alarm row is red: nothing else on the home works
+          // as it should until it is fixed.
+          if (_readiness case final readiness? when !readiness.ready) ...[
+            _NeedsSetupCard(readiness: readiness, onOpen: _openChecklist),
+            const SizedBox(height: 12),
+          ],
           ProgressCard(
             avatar: me.avatar,
             progress: progress,
@@ -498,6 +532,50 @@ class _QuestsTab extends ConsumerWidget {
           const SizedBox(height: 8),
           const QuestList(),
         ],
+      ),
+    );
+  }
+}
+
+/// On the home while a "ready for alarms" row is red: what will not work,
+/// and the way to the checklist, for the grown-up the child fetches.
+class _NeedsSetupCard extends StatelessWidget {
+  const _NeedsSetupCard({required this.readiness, required this.onOpen});
+
+  final ReadinessResult readiness;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = QuestColors.of(context).review;
+    final text = Theme.of(context).textTheme;
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: tint.fill,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.alarm_off_rounded, color: tint.ink),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Alarms may not work on this phone',
+                    style: text.titleMedium?.copyWith(color: tint.ink, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('${readiness.off.first.whenOff} Ask a grown-up to finish setting up.', style: text.bodyMedium?.copyWith(color: tint.ink)),
+            const SizedBox(height: 10),
+            FilledButton.tonal(onPressed: onOpen, child: const Text('Ready for alarms')),
+          ],
+        ),
       ),
     );
   }

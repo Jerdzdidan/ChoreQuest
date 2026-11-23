@@ -7,6 +7,8 @@ import '../../core/alarm/quest_alarm_service.dart';
 import '../../core/app_files.dart';
 import '../../core/camera/phone_session_camera.dart';
 import '../../core/camera/session_camera.dart';
+import '../../core/device/phone_readiness.dart';
+import '../../core/device/platform_readiness_probe.dart';
 import '../../core/models/chore.dart';
 import '../../core/quest_session/chore_detector.dart';
 import '../../core/quest_session/fake_detector.dart';
@@ -72,6 +74,21 @@ final alarmSafetyNetProvider = Provider<AlarmSafetyNet>((ref) {
 final scheduleStoreProvider = Provider<ScheduleStore>(
   (ref) => ScheduleStore(appFile(ref.watch(appFilesProvider), scheduleFileName)),
 );
+
+/// What this phone's alarms need, read from Android (DV-1).
+final readinessProbeProvider = Provider<ReadinessProbe>((ref) => const PlatformReadinessProbe());
+
+/// Checks the phone, keeps the result and reports it with the last schedule
+/// sync (DV-10).
+final phoneReadinessProvider = Provider<PhoneReadinessService>((ref) {
+  final schedule = ref.watch(scheduleStoreProvider);
+  return PhoneReadinessService(
+    probe: ref.watch(readinessProbeProvider),
+    store: ReadinessStore(appFile(ref.watch(appFilesProvider), 'phone_readiness.json')),
+    report: ref.watch(childApiProvider).reportDeviceStatus,
+    lastSync: () async => (await schedule.load())?.fetchedAt,
+  );
+});
 
 /// Fetches the schedule, saves it and arms it (DV-3), for the signed-in
 /// child.

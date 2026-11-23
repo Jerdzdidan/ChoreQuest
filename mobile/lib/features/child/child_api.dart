@@ -200,6 +200,14 @@ class ChildApi {
   Future<void> reportAlarmEvent(String kind, int assignmentId) =>
       _api.post('/my/alarm-events', body: {'kind': kind, 'assignment_id': assignmentId});
 
+  /// The "ready for alarms" checklist and when the schedule was last copied
+  /// (DV-10), so the parent's Board can say Ready or Needs setup.
+  Future<void> reportDeviceStatus(Map<String, bool> checks, DateTime? lastSyncAt) =>
+      _api.post('/my/device-status', body: {
+        'checks': checks,
+        'last_sync_at': lastSyncAt?.toUtc().toIso8601String(),
+      });
+
   /// Sends a finished quest session (BE-2): both photos and the evidence.
   /// Nothing is credited until a grown-up approves it.
   Future<SubmitResult> sendSession(OutgoingSession outgoing) async {

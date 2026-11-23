@@ -240,6 +240,11 @@ class AssignmentController extends Controller
 
     private function payload(Assignment $a): array
     {
+        return self::payloadFor($a);
+    }
+
+    public static function payloadFor(Assignment $a): array
+    {
         return [
             'id' => $a->id,
             'child_id' => $a->child_id,

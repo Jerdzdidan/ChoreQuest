@@ -153,6 +153,16 @@ class SubmissionController extends Controller
             'status' => $s->status,
             'for_date' => $s->for_date->toDateString(),
             'photo_url' => url("/api/submissions/{$s->id}/photo"),
+            // A quest session (BE-1): legacy_photo for every row before them.
+            'verification_mode' => $s->verification_mode ?? Submission::MODE_LEGACY,
+            'before_photo_url' => $s->before_photo_path === null
+                ? null
+                : url("/api/submissions/{$s->id}/photo?which=before"),
+            'evidence' => $s->evidence,
+            'active_seconds' => $s->active_seconds,
+            'session_started_at' => $s->session_started_at?->toIso8601String(),
+            'session_done_at' => $s->session_done_at?->toIso8601String(),
+            'camera_source' => $s->camera_source,
             'submitted_at' => $s->created_at->toIso8601String(),
         ];
     }

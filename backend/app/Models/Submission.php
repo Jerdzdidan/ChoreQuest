@@ -13,9 +13,20 @@ class Submission extends Model
 {
     use HasFactory;
 
+    /** One photo, checked by the single-photo flow, before quest sessions. */
+    public const MODE_LEGACY = 'legacy_photo';
+
+    /** A quest session the movement model watched. */
+    public const MODE_LSTM = 'lstm';
+
+    /** A quest session with no model: the parent checks Before and After. */
+    public const MODE_MANUAL = 'manual';
+
     protected $fillable = [
-        'child_id', 'assignment_id', 'photo_path',
+        'child_id', 'assignment_id', 'photo_path', 'before_photo_path',
         'model_label', 'model_confidence', 'model_version', 'inference_ms',
+        'evidence', 'session_started_at', 'session_done_at', 'active_seconds',
+        'verification_mode', 'camera_source',
         'routing', 'parent_decision', 'parent_decided_at', 'parent_user_id',
         'status', 'for_date', 'client_token',
     ];
@@ -27,7 +38,17 @@ class Submission extends Model
             'inference_ms' => 'integer',
             'parent_decided_at' => 'datetime',
             'for_date' => 'date',
+            'evidence' => 'array',
+            'session_started_at' => 'datetime',
+            'session_done_at' => 'datetime',
+            'active_seconds' => 'integer',
         ];
+    }
+
+    /** Whether this came from a live quest session rather than one photo. */
+    public function isSession(): bool
+    {
+        return $this->verification_mode !== self::MODE_LEGACY;
     }
 
     public function child(): BelongsTo

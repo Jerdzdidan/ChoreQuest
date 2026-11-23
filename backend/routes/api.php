@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\AlarmController;
 use App\Http\Controllers\Api\AllocationRuleController;
 use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuthController;
@@ -8,13 +9,17 @@ use App\Http\Controllers\Api\ChildAuthController;
 use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\ChoreTemplateController;
 use App\Http\Controllers\Api\DeviceCameraController;
+use App\Http\Controllers\Api\DeviceStatusController;
 use App\Http\Controllers\Api\FamilyQuestController;
 use App\Http\Controllers\Api\LedgerController;
+use App\Http\Controllers\Api\ModelConfigController;
+use App\Http\Controllers\Api\MyScheduleController;
 use App\Http\Controllers\Api\MyAvatarController;
 use App\Http\Controllers\Api\MyCosmeticsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TimezoneController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +55,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     // The phone's timezone, sent at sign-in; days are counted in it.
     Route::patch('/me/timezone', [TimezoneController::class, 'update']);
+
+    // The movement model's thresholds, tunable without a rebuild (BE-6).
+    Route::get('/model-config', [ModelConfigController::class, 'show']);
 });
 
 /*
@@ -121,6 +129,9 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
     Route::get('/my/chores', [AssignmentController::class, 'today']);
 
     Route::post('/submissions', [SubmissionController::class, 'store']);
+    // A finished live quest session: Before, After and the evidence (BE-2).
+    // Never credited here; only a parent's approval is.
+    Route::post('/quest-sessions', [SessionController::class, 'store']);
     Route::get('/my/submissions', [SubmissionController::class, 'mine']);
     Route::get('/my/balance', [LedgerController::class, 'balance']);
     Route::post('/my/consume', [LedgerController::class, 'consume']);
@@ -143,4 +154,17 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
 
     // The cameras this phone can see, replacing what it reported before (BE-8).
     Route::post('/my/cameras', [DeviceCameraController::class, 'store']);
+
+    // Everything the phone needs to arm its alarms offline (BE-7).
+    Route::get('/my/schedule', [MyScheduleController::class, 'show']);
+
+    // Whether this phone is ready to ring (BE-9).
+    Route::post('/my/device-status', [DeviceStatusController::class, 'store']);
+
+    // An alarm that timed out, or a camera that was missing (DV-7, DV-12).
+    Route::post('/my/alarm-events', [AlarmController::class, 'report']);
+
+    // The grown-up stop: the parent's password on the child's phone (BE-10).
+    // Rate-limited, as a password check must be.
+    Route::post('/alarm/override', [AlarmController::class, 'override'])->middleware('throttle:alarm-override');
 });

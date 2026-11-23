@@ -1,0 +1,24 @@
+{
+  "_about": "The movement model's thresholds (BE-6), served at GET /api/model-config and read by every phone at app open. ml/07_calibrate.py (M7) rewrites this file after calibration; until then these are starting points. Change a number here and the Done gate changes on the next app open, with no new APK. Bump version whenever anything changes.",
+  "version": "uncalibrated-1",
+  "model": {
+    "backbone": "backbone.tflite",
+    "temporal": "temporal.tflite",
+    "input_size": 192,
+    "frames_per_second": 4,
+    "window": 16,
+    "other_class": 24
+  },
+  "defaults": {
+    "min_probability": 0.6,
+    "min_seconds": 30,
+    "gap_seconds": 8
+  },
+  "chores": {},
+  "evidence_bands": {
+    "probability": 0.6,
+    "active_seconds": 20,
+    "scene_change": 0.1
+  },
+  "max_ring_minutes": 10
+}

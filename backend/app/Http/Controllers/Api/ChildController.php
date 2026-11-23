@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Child;
+use App\Models\DeviceStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -110,6 +111,8 @@ class ChildController extends Controller
             'birthdate' => $child->birthdate->toDateString(),
             'age' => $child->age(),
             'is_locked' => $child->isLocked(),
+            // Ready or Needs setup on the Board (BE-9, PR-4).
+            'device' => DeviceStatus::summaryFor($child->deviceStatus),
         ];
     }
 }

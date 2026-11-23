@@ -128,14 +128,23 @@ class ReviewController extends Controller
     /**
      * Photographs of minors inside their homes. Never public: served only to
      * the parent who owns the household, and only through this route.
+     *
+     * ?which=before serves a quest session's Before photo (BE-4); after, the
+     * default, serves the After photo, which is also the one photo of every
+     * submission from before sessions, so old rows and old clients work as
+     * they did.
      */
     public function photo(Request $request, Submission $submission): StreamedResponse
     {
         $this->authoriseOwnership($request, $submission);
 
-        abort_unless(Storage::disk('local')->exists($submission->photo_path), 404);
+        $which = $request->query('which', 'after');
+        abort_unless(in_array($which, ['before', 'after'], true), 404);
+        $path = $which === 'before' ? $submission->before_photo_path : $submission->photo_path;
 
-        return Storage::disk('local')->response($submission->photo_path);
+        abort_unless($path !== null && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path);
     }
 
     private function authoriseOwnership(Request $request, Submission $submission): void

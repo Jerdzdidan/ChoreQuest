@@ -85,6 +85,12 @@ class Child extends Model
         return $this->hasMany(ChildCosmetic::class);
     }
 
+    /** Whether this child's phone is ready to ring (BE-9). */
+    public function deviceStatus(): HasOne
+    {
+        return $this->hasOne(DeviceStatus::class);
+    }
+
     /**
      * Every child has a rule. One is created with defaults on first access so
      * no code path downstream has to cope with its absence.

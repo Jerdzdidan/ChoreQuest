@@ -44,17 +44,17 @@ class CataloguePickerScreen extends ConsumerWidget {
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
-          AsyncView<List<ChoreTemplate>>(
+          AsyncView<ChoreCatalogue>(
             value: catalogue,
             onRetry: () => ref.invalidate(catalogueProvider(child.id)),
-            builder: (context, list) => list.isEmpty
+            builder: (context, catalogue) => catalogue.chores.isEmpty
                 ? Text(
                     'No chores in the catalogue suit age ${child.age}. '
                     'ChoreQuest covers ages 4 to 10.',
                   )
                 : Column(
                     children: [
-                      for (final template in list)
+                      for (final template in catalogue.chores)
                         _TemplateTile(
                           template: template,
                           assignedAt: assignedLocations[template.id],

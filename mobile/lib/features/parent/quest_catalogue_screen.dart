@@ -100,10 +100,11 @@ class _QuestCatalogueScreenState extends ConsumerState<QuestCatalogueScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          AsyncView<List<ChoreTemplate>>(
+          AsyncView<ChoreCatalogue>(
             value: catalogue,
             onRetry: () => ref.invalidate(fullCatalogueProvider),
-            builder: (context, all) {
+            builder: (context, catalogue) {
+              final all = catalogue.chores;
               final groups = catalogueByPlace(all, _query);
               final shown = groups.fold<int>(0, (sum, group) => sum + group.$2.length);
               if (groups.isEmpty) {

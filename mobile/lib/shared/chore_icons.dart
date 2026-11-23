@@ -33,6 +33,12 @@ const _icons = <String, IconData>{
   'sink': Icons.wash,
   'shoes': Icons.hiking,
   'snack': Icons.bakery_dining,
+  // Phase 4's catalogue (CH-2).
+  'dry': Icons.dry,
+  'shelves': Icons.shelves,
+  'vacuum': Icons.cleaning_services,
+  'fish': Icons.set_meal,
+  'bird': Icons.flutter_dash,
 };
 
 /// Background and foreground per category, as a pale fill with a deep ink so
@@ -45,6 +51,11 @@ const _categoryColours = <String, (Color, Color)>{
   'cleaning': (Color(0xFFD6E7F5), Color(0xFF1D4A73)),
   'laundry': (Color(0xFFF7DEE9), Color(0xFF822B52)),
   'study': (Color(0xFFD5F0EC), Color(0xFF0F5E56)),
+  // Phase 4's categories (CH-2); kitchen, laundry and study are above.
+  'floors': (Color(0xFFD6E7F5), Color(0xFF1D4A73)),
+  'plants': (Color(0xFFD9F0CB), Color(0xFF2B6320)),
+  'rubbish': (Color(0xFFFFF1C2), Color(0xFF6E5200)),
+  'custom': (Color(0xFFEDE3F5), Color(0xFF5B2F7A)),
 };
 
 class ChoreIcon extends StatelessWidget {

@@ -31,12 +31,12 @@ final assignmentsProvider =
 );
 
 /// Every chore in the catalogue, whatever the age: the Quests tab (PQ1).
-final fullCatalogueProvider = FutureProvider.autoDispose<List<ChoreTemplate>>(
+final fullCatalogueProvider = FutureProvider.autoDispose<ChoreCatalogue>(
   (ref) => ref.watch(parentApiProvider).catalogue(),
 );
 
 final catalogueProvider =
-    FutureProvider.autoDispose.family<List<ChoreTemplate>, int>(
+    FutureProvider.autoDispose.family<ChoreCatalogue, int>(
   (ref, childId) => ref.watch(parentApiProvider).catalogueFor(childId),
 );
 

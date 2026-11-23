@@ -42,7 +42,17 @@ class AssignmentController extends Controller
         $child = $request->user()->children()->find($data['child_id']);
         abort_unless($child, 404);
 
-        $template = ChoreTemplate::findOrFail($data['chore_template_id']);
+        $template = ChoreTemplate::visibleTo($request->user())->find($data['chore_template_id']);
+
+        // Another parent's custom chore is as good as absent. A retired chore
+        // keeps the assignments it already has but takes no new ones.
+        if (! $template || $template->isRetired()) {
+            throw ValidationException::withMessages([
+                'chore_template_id' => [$template
+                    ? sprintf('"%s" is no longer in the catalogue.', $template->name)
+                    : 'That chore is not in your catalogue.'],
+            ]);
+        }
 
         // A chore outside the child's age band is refused rather than silently
         // accepted. The age grading is a safety claim in Chapter 1, not a hint.

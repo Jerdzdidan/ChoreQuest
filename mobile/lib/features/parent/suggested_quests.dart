@@ -21,7 +21,7 @@ const suggestedQuestCount = 5;
 /// each child's chores. A chore given to any child, to any of them, drops
 /// out; a chore paused for everyone comes back.
 final suggestedQuestsProvider = FutureProvider.autoDispose<List<ChoreTemplate>>((ref) async {
-  final catalogue = await ref.watch(fullCatalogueProvider.future);
+  final catalogue = (await ref.watch(fullCatalogueProvider.future)).chores;
   final children = await ref.watch(childrenProvider.future);
 
   final given = <int>{};

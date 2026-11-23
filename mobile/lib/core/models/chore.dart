@@ -4,6 +4,7 @@ import 'api_dates.dart';
 class ChoreTemplate {
   const ChoreTemplate({
     required this.id,
+    this.key,
     required this.name,
     required this.description,
     required this.icon,
@@ -15,10 +16,15 @@ class ChoreTemplate {
     required this.modelVerifiable,
     this.difficulty = QuestDifficulty.easy,
     this.location = QuestLocation.other,
+    this.verificationMode = VerificationMode.manual,
+    this.modelClass,
+    this.minActiveSeconds,
+    this.isCustom = false,
   });
 
   factory ChoreTemplate.fromJson(Map<String, dynamic> json) => ChoreTemplate(
         id: json['id'] as int,
+        key: json['key'] as String?,
         name: json['name'] as String,
         description: json['description'] as String? ?? '',
         icon: json['icon'] as String? ?? '',
@@ -30,9 +36,16 @@ class ChoreTemplate {
         modelVerifiable: json['model_verifiable'] as bool? ?? false,
         difficulty: QuestDifficulty.parse(json['difficulty'] as String?),
         location: QuestLocation.parse(json['location'] as String?),
+        verificationMode: VerificationMode.parse(json['verification_mode'] as String?),
+        modelClass: json['model_class'] as int?,
+        minActiveSeconds: json['min_active_seconds'] as int?,
+        isCustom: json['is_custom'] as bool? ?? false,
       );
 
   final int id;
+
+  /// The chore's key in ml/chore_manifest.json; null for a custom chore.
+  final String? key;
   final String name;
   final String description;
   final String icon;
@@ -54,6 +67,76 @@ class ChoreTemplate {
   /// Offered first when a grown-up assigns it; the assignment's own
   /// location is what the quest map uses.
   final QuestLocation location;
+
+  /// How the quest session checks it (Phase 4).
+  final VerificationMode verificationMode;
+
+  /// The movement model's class for a motion-checked chore.
+  final int? modelClass;
+
+  /// Seconds of matching movement before Done appears, unless the model
+  /// config names its own.
+  final int? minActiveSeconds;
+
+  /// A chore the parent made up. Only that parent sees it, and only the
+  /// parent checks it.
+  final bool isCustom;
+}
+
+/// How a chore is checked in a quest session.
+enum VerificationMode {
+  /// The movement model watches; Done appears after enough movement that
+  /// looks like this chore.
+  motion,
+
+  /// No model: the parent checks the Before and After photos.
+  manual;
+
+  /// Anything this version does not know reads as [manual], the side that
+  /// never lets a model decide.
+  static VerificationMode parse(String? raw) => raw == 'lstm' ? motion : manual;
+
+  String get label => switch (this) {
+        motion => 'Motion-checked',
+        manual => 'Manual check',
+      };
+}
+
+/// A group of chores a parent picks from first: "Kitchen & dishes", and
+/// "Custom chore" last. The list comes from the server.
+class ChoreCategory {
+  const ChoreCategory({required this.key, required this.name});
+
+  factory ChoreCategory.fromJson(Map<String, dynamic> json) =>
+      ChoreCategory(key: json['key'] as String, name: json['name'] as String);
+
+  /// The key of the parent's own chores.
+  static const custom = 'custom';
+
+  final String key;
+  final String name;
+
+  bool get isCustom => key == custom;
+}
+
+/// The catalogue as the server sends it: the categories, in order, and the
+/// chores.
+class ChoreCatalogue {
+  const ChoreCatalogue({required this.categories, required this.chores});
+
+  factory ChoreCatalogue.fromJson(Map<String, dynamic> json) => ChoreCatalogue(
+        categories: [
+          for (final raw in (json['categories'] as List? ?? const []).cast<Map<String, dynamic>>())
+            ChoreCategory.fromJson(raw),
+        ],
+        chores: [
+          for (final raw in (json['chores'] as List? ?? const []).cast<Map<String, dynamic>>())
+            ChoreTemplate.fromJson(raw),
+        ],
+      );
+
+  final List<ChoreCategory> categories;
+  final List<ChoreTemplate> chores;
 }
 
 enum QuestDifficulty {

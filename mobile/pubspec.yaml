@@ -7,6 +7,7 @@ environment:
   sdk: ^3.13.2
 
 dependencies:
+  alarm: 5.15.0
   audioplayers: 6.8.1
   camera: ^0.12.1
   confetti: ^0.8.0
@@ -18,6 +19,7 @@ dependencies:
   flutter_secure_storage: ^11.1.0
   path_provider: 2.1.6
   wakelock_plus: 1.8.2
+  workmanager: 0.10.10
 
 dev_dependencies:
   flutter_test:

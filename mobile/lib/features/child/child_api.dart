@@ -186,6 +186,20 @@ class ChildApi {
     );
   }
 
+  /// Everything the phone needs to arm its alarms (BE-7), as the server
+  /// sends it, for the schedule store to keep.
+  Future<Map<String, dynamic>> mySchedule() => _api.get('/my/schedule');
+
+  /// The grown-up stop (BE-10): the parent's own password, checked and
+  /// recorded by the server. A wrong one is refused and changes nothing.
+  Future<void> alarmOverride(String password, int assignmentId) =>
+      _api.post('/alarm/override', body: {'password': password, 'assignment_id': assignmentId});
+
+  /// Tells the parent that an alarm timed out, or that its camera was
+  /// missing (DV-7, DV-12).
+  Future<void> reportAlarmEvent(String kind, int assignmentId) =>
+      _api.post('/my/alarm-events', body: {'kind': kind, 'assignment_id': assignmentId});
+
   /// Sends a finished quest session (BE-2): both photos and the evidence.
   /// Nothing is credited until a grown-up approves it.
   Future<SubmitResult> sendSession(OutgoingSession outgoing) async {

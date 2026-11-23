@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/alarm/alarm_safety_net.dart';
+import '../../core/alarm/plugin_alarm_backend.dart';
+import '../../core/alarm/quest_alarm_service.dart';
 import '../../core/app_files.dart';
 import '../../core/camera/phone_session_camera.dart';
 import '../../core/camera/session_camera.dart';
@@ -9,6 +12,9 @@ import '../../core/quest_session/chore_detector.dart';
 import '../../core/quest_session/fake_detector.dart';
 import '../../core/quest_session/model_config.dart';
 import '../../core/quest_session/no_model_detector.dart';
+import '../../core/schedule/background_sync.dart';
+import '../../core/schedule/schedule_store.dart';
+import '../../core/schedule/schedule_sync.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import 'child_providers.dart';
@@ -38,10 +44,43 @@ final modelConfigProvider = FutureProvider<ModelConfig>((ref) {
   return store.load();
 });
 
-/// Stops a quest's ringing alarm. Nothing rings yet; the alarm service
-/// (DV-4) puts the real stop here, and DV-6 keeps this its only caller.
-final alarmStopperProvider = Provider<void Function(Assignment assignment)>(
-  (ref) => (_) {},
+/// The quest alarms on this phone (DV-4).
+final questAlarmServiceProvider = Provider<QuestAlarmService>(
+  (ref) => QuestAlarmService(const PluginAlarmBackend()),
+);
+
+/// Stops a quest's ringing alarm and arms its next ring. The live session's
+/// first matching movement is its only caller (DV-6), with the safety net
+/// beside it (DV-7).
+final alarmStopperProvider = Provider<void Function(Assignment assignment)>((ref) {
+  final alarms = ref.watch(questAlarmServiceProvider);
+  return (assignment) => alarms.stop(assignment).catchError((_) {});
+});
+
+/// The safety net beside the session (DV-7): the longest ring and the
+/// grown-up stop, both reported to the parent.
+final alarmSafetyNetProvider = Provider<AlarmSafetyNet>((ref) {
+  final api = ref.watch(childApiProvider);
+  return AlarmSafetyNet(
+    alarms: ref.watch(questAlarmServiceProvider),
+    report: api.reportAlarmEvent,
+    override: api.alarmOverride,
+  );
+});
+
+/// The schedule saved on this phone (DV-2).
+final scheduleStoreProvider = Provider<ScheduleStore>(
+  (ref) => ScheduleStore(appFile(ref.watch(appFilesProvider), scheduleFileName)),
+);
+
+/// Fetches the schedule, saves it and arms it (DV-3), for the signed-in
+/// child.
+final scheduleSyncProvider = Provider<ScheduleSync>(
+  (ref) => ScheduleSync(
+    fetch: ref.watch(childApiProvider).mySchedule,
+    store: ref.watch(scheduleStoreProvider),
+    alarms: ref.watch(questAlarmServiceProvider),
+  ),
 );
 
 /// Hands a finished session to the upload queue and tries to send it at once

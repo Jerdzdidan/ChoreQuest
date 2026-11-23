@@ -4,18 +4,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/alarm/alarm_safety_net.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/models/balance.dart';
 import '../../core/models/child_progress.dart';
 import '../../core/models/chore.dart';
 import '../../core/models/submission.dart';
 import '../../core/notifications/local_notifier.dart';
+import '../../core/schedule/schedule_store.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
 import '../../shared/async_view.dart';
 import '../../shared/format.dart';
 import '../../shared/leveling.dart';
 import '../../shared/theme.dart';
+import 'alarm_ring_screen.dart';
 import 'approval_celebration.dart';
 import 'avatar_screen.dart';
 import 'child_api.dart';
@@ -28,6 +31,7 @@ import 'progress_card.dart';
 import 'quest_list.dart';
 import 'quest_log_screen.dart';
 import 'quest_map.dart';
+import 'quest_session_providers.dart';
 import 'reward_track_screen.dart';
 import 'screen_time_sheet.dart';
 import 'upload_sync.dart';
@@ -59,6 +63,11 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
   UploadSync? _uploads;
   bool _sendingSaved = false;
   bool _celebrating = false;
+
+  /// Quest alarms ringing now, and when each started (DV-5, DV-7).
+  StreamSubscription<Set<int>>? _ringing;
+  final _ringScreens = <int>{};
+  final _ringTimeouts = <int, Timer>{};
 
   var _tab = 0;
 
@@ -105,6 +114,11 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     if (me != null) _uploads = ref.read(uploadSyncProvider(me.token));
 
     _startPolling();
+    // The alarms follow the schedule: fetched, saved and armed now and at
+    // every return to the app (DV-3); the background task does the same
+    // while the app is closed.
+    unawaited(_syncSchedule());
+    _ringing = ref.read(questAlarmServiceProvider).backend.ringing.listen(_onRinging, onError: (_) {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Photos saved while the app was closed go as soon as it opens.
       unawaited(_sendSaved());
@@ -128,9 +142,96 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
     }
   }
 
+  Future<void> _syncSchedule() async {
+    try {
+      await ref.read(scheduleSyncProvider).sync();
+    } catch (_) {
+      // Offline or unhappy: the saved schedule stays armed.
+    }
+  }
+
+  /// A quest alarm started ringing: open its ring page over whatever is on
+  /// screen, and start the longest-ring clock (DV-7), counted from the
+  /// alarm's own minute so a phone woken late does not ring longer.
+  Future<void> _onRinging(Set<int> ids) async {
+    for (final id in ids) {
+      // Marked before any wait, so a second update while this one looks the
+      // quest up does not open the page twice.
+      if (!_ringScreens.add(id)) continue;
+      final (saved, assignment) = await _lookUp(id);
+      if (!mounted) return;
+      if (assignment == null) {
+        await _quietOffSchedule(id, saved);
+        _ringScreens.remove(id);
+        continue;
+      }
+      final since = await _ringStart(assignment);
+      _armTimeout(assignment, since);
+      if (!mounted) return;
+      unawaited(Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => AlarmRingScreen(assignment: assignment, ringingSince: since)))
+          .whenComplete(() => _ringScreens.remove(id)));
+    }
+    for (final id in _ringTimeouts.keys.toList()) {
+      if (!ids.contains(id)) _ringTimeouts.remove(id)?.cancel();
+    }
+  }
+
+  /// The ringing quest in the saved schedule. An alarm can ring before the
+  /// first sync has finished, so a quest not found is looked for again after
+  /// one.
+  Future<(ScheduleSnapshot?, Assignment?)> _lookUp(int id) async {
+    final store = ref.read(scheduleStoreProvider);
+    var saved = await store.load();
+    var found = saved?.assignments.where((a) => a.id == id).firstOrNull;
+    if (found == null) {
+      await _syncSchedule();
+      saved = await store.load();
+      found = saved?.assignments.where((a) => a.id == id).firstOrNull;
+    }
+    return (saved, found);
+  }
+
+  /// An alarm for a quest that is not on the schedule: the parent removed or
+  /// paused it while it rang, so there is no quest to start and no session to
+  /// stop it. It goes quiet. With no saved schedule at all to tell by, the
+  /// longest ring still bounds it.
+  Future<void> _quietOffSchedule(int id, ScheduleSnapshot? saved) async {
+    final alarms = ref.read(questAlarmServiceProvider);
+    if (saved != null) {
+      await alarms.silenceOffSchedule(id, saved.assignments);
+      return;
+    }
+    final maxMinutes = ref.read(modelConfigProvider).value?.maxRingMinutes ?? 10;
+    _ringTimeouts[id]?.cancel();
+    _ringTimeouts[id] = Timer(Duration(minutes: maxMinutes), () {
+      _ringTimeouts.remove(id);
+      unawaited(alarms.silenceOffSchedule(id, const []));
+    });
+  }
+
+  Future<DateTime> _ringStart(Assignment assignment) async {
+    final at = ref.read(questAlarmServiceProvider).alarmFor(assignment, after: DateTime.now().subtract(const Duration(hours: 1)))?.at;
+    return at != null && at.isBefore(DateTime.now()) ? at : DateTime.now();
+  }
+
+  void _armTimeout(Assignment assignment, DateTime since) {
+    _ringTimeouts[assignment.id]?.cancel();
+    final maxMinutes = ref.read(modelConfigProvider).value?.maxRingMinutes ?? 10;
+    final left = AlarmSafetyNet.remaining(since, maxMinutes, DateTime.now());
+    _ringTimeouts[assignment.id] = Timer(left, () {
+      _ringTimeouts.remove(assignment.id);
+      unawaited(ref.read(alarmSafetyNetProvider).timedOut(assignment));
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_ringing?.cancel());
+    for (final timer in _ringTimeouts.values) {
+      timer.cancel();
+    }
     _poll?.cancel();
     _away?.cancel();
     super.dispose();
@@ -154,6 +255,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen>
       _away?.cancel();
       refreshChildData(ref);
       unawaited(_sendSaved());
+      unawaited(_syncSchedule());
       _startPolling();
     } else if (state == AppLifecycleState.paused) {
       _poll?.cancel();

@@ -18,6 +18,7 @@ dependencies:
   flutter_riverpod: ^3.4.3
   flutter_secure_storage: ^11.1.0
   path_provider: 2.1.6
+  tflite_flutter: 0.12.1
   wakelock_plus: 1.8.2
   workmanager: 0.10.10
 
@@ -42,3 +43,6 @@ flutter:
     - assets/badges/
     # Alarm sounds (PS-8): Kenney's "85 Short music jingles", CC0.
     - assets/ringtones/
+    # The movement model (LS-5), from ml/08_convert.py --install. Empty until
+    # then: sessions run manual.
+    - assets/models/

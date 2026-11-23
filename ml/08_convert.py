@@ -32,6 +32,14 @@ The real run writes artifacts/backbone.tflite, temporal.tflite and
 model_card.json (classes, scenes, sizes, where each head sits in the output,
 the temperature, the version). --install copies the three into
 mobile/assets/models/, where the app looks for them (LS-5).
+
+--reference <clip> also runs one clip (a path under data/clips/) through the two
+new files exactly as the phone will, smoothing included, and writes
+reference_frames.bin (its prepared frames) and reference.json (the signals
+Python got). Installed with the model, the app's debug benchmark screen (M11)
+runs the same frames and says how far its numbers are from these: the LS-5
+check that the phone and Python agree. Remove the two reference files before a
+release build; they are only for testing.
 """
 import argparse
 import datetime
@@ -114,6 +122,7 @@ def main():
     parser.add_argument("--max-difference", type=float, default=0.02)
     parser.add_argument("--max-drop", type=float, default=0.02)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--reference", help="a clip under data/clips/ to write the phone check for")
     args = parser.parse_args()
 
     import tensorflow as tf
@@ -216,13 +225,43 @@ def main():
     print(f"Wrote {out_dir.relative_to(p.ML)}/backbone.tflite ({len(backbone_lite) // 1024} KB), "
           f"temporal.tflite ({len(temporal_lite) // 1024} KB) and model_card.json.")
 
+    files = ["backbone.tflite", "temporal.tflite", "model_card.json"]
+    if args.reference:
+        files += write_reference(p.CLIPS / args.reference, size, lite_backbone, lite_temporal, layout, out_dir)
+
     if failures:
         p.fail("the converted model is not close enough to the full one:\n  " + "\n  ".join(failures))
     if args.install:
         p.APP_MODELS.mkdir(parents=True, exist_ok=True)
-        for file in ("backbone.tflite", "temporal.tflite", "model_card.json"):
+        for file in files:
             shutil.copyfile(out_dir / file, p.APP_MODELS / file)
         print("Installed into mobile/assets/models/. Build the app to ship them.")
+
+
+def write_reference(clip, size, backbone, temporal, layout, out_dir):
+    """One clip as the phone will see it, and what Python makes of it."""
+    p.need_ffmpeg()
+    frames = p.decode(clip, p.FPS)
+    if len(frames) < p.FPS:
+        p.fail(f"{clip} is too short for a reference")
+    prepared = np.stack([p.prepare(f, size) for f in frames])
+    embeddings, energy = backbone(prepared), p.energies(prepared)
+    lo, hi = layout["chore"]
+
+    def run(windows):
+        out = temporal(windows)
+        return out[:, lo:hi], out[:, layout["activity"]]
+
+    signals = p.session_signals([(embeddings, energy)], run)
+    squares = np.round((prepared + 1.0) * 127.5).clip(0, 255).astype(np.uint8)
+    (out_dir / "reference_frames.bin").write_bytes(squares.tobytes())
+    p.write_json(out_dir / "reference.json", {
+        "clip": clip.name, "frames": len(prepared), "size": size, "tolerance": 0.02,
+        "signals": [{"at": at, "chore": [round(float(x), 6) for x in probabilities], "activity": round(activity, 6)}
+                    for at, probabilities, activity in signals],
+    })
+    print(f"Wrote reference_frames.bin and reference.json: {len(prepared)} frames, {len(signals)} signals.")
+    return ["reference_frames.bin", "reference.json"]
 
 
 if __name__ == "__main__":

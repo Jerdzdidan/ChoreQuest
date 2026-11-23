@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <!-- The TFLite package's GPU library (LS-5) declares no target SDK, so
+         Android's manifest merger assumes it needs the phone's identity.
+         It does not, and neither does ChoreQuest. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove"/>
     <!-- Quest alarms (DV-4): what the alarm plugin's own Android setup asks
          for, so an alarm rings at its minute with the app closed and the
          screen locked, survives a restart, opens the full-screen page, plays

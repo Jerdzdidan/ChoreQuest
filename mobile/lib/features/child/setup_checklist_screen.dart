@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/device/phone_readiness.dart';
 import '../../core/models/camera.dart';
 import '../../shared/theme.dart';
+import 'model_benchmark_screen.dart';
 import 'network_cameras_screen.dart';
 import 'quest_session_providers.dart';
 
@@ -168,6 +170,12 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
               icon: const Icon(Icons.videocam_rounded),
               label: const Text('Network cameras (CCTV)'),
             ),
+            // M11: not in a release build.
+            if (kDebugMode)
+              TextButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ModelBenchmarkScreen())),
+                child: const Text('Model benchmark (test build)'),
+              ),
             if (_note != null) ...[
               const SizedBox(height: 12),
               Semantics(

@@ -9,6 +9,8 @@ a model trained on numbers the phone computes differently is a different model:
 - movement_energy(): how much the picture changed between two prepared frames,
   the one extra number per frame the LSTM gets.
   (mobile/lib/core/quest_session/lstm_detector.dart, movementEnergy)
+- smooth(): each signal is the mean of the model's last three outputs.
+  (mobile/lib/core/quest_session/lstm_detector.dart, TemporalCore)
 - DoneGate: when the Done button appears.
   (mobile/lib/core/quest_session/done_gate.dart)
 
@@ -59,6 +61,7 @@ WINDOW = 16    # frames the LSTM looks at: four seconds
 POOLED = 1280  # MobileNetV2's pooled features
 EMBED = 256    # the projection the backbone ends with
 GRID = 16      # movement energy is sampled on a 16 x 16 grid
+SMOOTHING = 3  # each signal is the mean of the last three outputs, as on the phone
 SHORT_SIDE = 256  # clips and cached frames are this tall (or wide), no more
 CLIP_COLUMNS = ["clip", "source", "household", "start", "end", "label", "domain"]
 
@@ -466,8 +469,20 @@ def session_signals(parts, temporal):
     ends = signal_frames(len(embeddings))
     if not ends:
         return []
-    probabilities, activity = temporal(np.stack([window_at(embeddings, energy, end) for end in ends]))
+    probabilities, activity = smooth(*temporal(np.stack([window_at(embeddings, energy, end) for end in ends])))
     return [(end / FPS, probabilities[i], float(activity[i])) for i, end in enumerate(ends)]
+
+
+def smooth(probabilities, activity):
+    """Each output as the mean of it and the ones before it, up to SMOOTHING,
+    as the phone smooths what the LSTM says before the Done gate sees it."""
+    probabilities, activity = np.asarray(probabilities, np.float64), np.asarray(activity, np.float64)
+    out_p, out_a = np.empty_like(probabilities), np.empty_like(activity)
+    for i in range(len(activity)):
+        lo = max(0, i - SMOOTHING + 1)
+        out_p[i] = probabilities[lo:i + 1].mean(axis=0)
+        out_a[i] = activity[lo:i + 1].mean()
+    return out_p, out_a
 
 
 # ---------------------------------------------------------------- the trained model, as the phone will run it

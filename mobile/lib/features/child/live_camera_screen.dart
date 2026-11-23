@@ -59,6 +59,13 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
     } catch (_) {
       config = ModelConfig.fallback;
     }
+    // The model files load once, at the first session; until then there is
+    // no detector to hand out. A load that never finishes counts as no model.
+    try {
+      await ref.read(lstmModelsProvider.future).timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // Missing, broken or stuck: the session runs manual.
+    }
     if (!mounted) return;
     final chore = widget.assignment.chore;
     final detector = ref.read(choreDetectorProvider)();

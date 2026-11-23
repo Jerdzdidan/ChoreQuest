@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/alarm/alarm_safety_net.dart';
@@ -20,6 +21,7 @@ import '../../core/quest_session/chore_detector.dart';
 import '../../core/quest_session/fake_detector.dart';
 import '../../core/quest_session/model_config.dart';
 import '../../core/quest_session/no_model_detector.dart';
+import '../../core/quest_session/tflite_models.dart';
 import '../../core/schedule/background_sync.dart';
 import '../../core/schedule/schedule_store.dart';
 import '../../core/schedule/schedule_sync.dart';
@@ -79,11 +81,22 @@ final cameraReporterProvider = Provider<CameraReporter>((ref) {
 });
 
 /// The movement detector a session watches with. Debug builds get the fake
-/// one (LS-4); a release build, until the trained model is bundled (LS-5),
-/// gets none and runs every session manual.
-final choreDetectorProvider = Provider<ChoreDetector Function()>(
-  (ref) => () => kDebugMode ? FakeDetector() : const NoModelDetector(),
-);
+/// one (LS-4) unless built with --dart-define=REAL_MODEL=true; a release
+/// build gets the real one (LS-5) when the model files are bundled, and
+/// otherwise none, which runs every session manual.
+final choreDetectorProvider = Provider<ChoreDetector Function()>((ref) {
+  final models = ref.watch(lstmModelsProvider).value;
+  return () {
+    if (kDebugMode && !_realModelInDebug) return FakeDetector();
+    return models?.detector() ?? const NoModelDetector();
+  };
+});
+
+const _realModelInDebug = bool.fromEnvironment('REAL_MODEL');
+
+/// The movement model's card and two files (LS-5), loaded once; null when
+/// they are missing or will not load.
+final lstmModelsProvider = FutureProvider<LstmModels?>((ref) => LstmModels.load(rootBundle));
 
 /// The model config, fetched at app open and kept for offline (BE-6).
 final modelConfigProvider = FutureProvider<ModelConfig>((ref) {

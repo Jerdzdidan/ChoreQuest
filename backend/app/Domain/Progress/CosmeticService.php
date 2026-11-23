@@ -21,9 +21,10 @@ class CosmeticService
 {
     /**
      * What a cosmetic slots into. Each room slot is its own category, so a
-     * rug, a picture and a plant can all be on at once.
+     * rug, a picture and a plant can all be on at once. A body (AV-3) is the
+     * character's skin and hair; every body is open from level 1.
      */
-    public const CATEGORIES = ['outfit', 'headwear', 'pet', 'rug', 'wall', 'plant'];
+    public const CATEGORIES = ['body', 'outfit', 'headwear', 'pet', 'rug', 'wall', 'plant'];
 
     /**
      * Records items as unlocked for this child.

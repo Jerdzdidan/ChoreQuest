@@ -37,6 +37,7 @@ class TrackLevel {
 }
 
 String kindOf(CosmeticCategory category) => switch (category) {
+      CosmeticCategory.body => 'Body',
       CosmeticCategory.outfit => 'Outfit',
       CosmeticCategory.headwear => 'Hat',
       CosmeticCategory.pet => 'Pet',
@@ -56,11 +57,13 @@ const _nothing = 'none';
 ///
 /// Pure: it reads only the registries, so it needs no table and no request,
 /// and a new registry entry appears on the track by itself. Levels with
-/// nothing to unlock are left out, and so are "No hat" and "No pet".
+/// nothing to unlock are left out, and so are "No hat", "No pet" and the
+/// bodies: who a child is is a choice, not a reward.
 List<TrackLevel> rewardTrack() {
   final byLevel = <int, List<TrackReward>>{};
 
   for (final category in CosmeticCategory.values) {
+    if (category == CosmeticCategory.body) continue;
     for (final MapEntry(:key, value: style) in cosmeticsIn(category).entries) {
       if (key == _nothing) continue;
       byLevel.putIfAbsent(style.unlockLevel, () => []).add(

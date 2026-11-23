@@ -1,4 +1,5 @@
 import '../core/models/cosmetics.dart';
+import 'bodies.dart';
 import 'cosmetic_style.dart';
 import 'headwear.dart';
 import 'outfits.dart';
@@ -12,6 +13,7 @@ import 'room_items.dart';
 /// everything a level unlocks in one place.
 Map<String, CosmeticStyle> cosmeticsIn(CosmeticCategory category) =>
     switch (category) {
+      CosmeticCategory.body => bodies,
       CosmeticCategory.outfit => outfits,
       CosmeticCategory.headwear => headwear,
       CosmeticCategory.pet => pets,

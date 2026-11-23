@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,12 +6,14 @@ import '../../core/api/api_exception.dart';
 import '../../core/models/cosmetics.dart';
 import '../../core/session/session.dart';
 import '../../core/session/session_controller.dart';
+import '../../shared/bodies.dart';
 import '../../shared/character_portrait.dart';
 import '../../shared/cosmetic_style.dart';
 import '../../shared/cosmetics.dart';
 import '../../shared/headwear.dart';
 import '../../shared/inline_error.dart';
 import '../../shared/leveling.dart';
+import '../../shared/outfits.dart';
 import '../../shared/pets.dart';
 import 'badges_screen.dart';
 import 'category_row.dart';
@@ -20,7 +23,7 @@ import 'room_decor_screen.dart';
 import 'wardrobe.dart';
 
 /// My Avatar: the child's character, dressed in what they have chosen, and
-/// rows of outfits, hats and pets to choose from. Items a child's level has
+/// rows of bodies, outfits, hats and pets to choose from. Items a child's level has
 /// not reached yet are shown with a lock and the level they need, so there is
 /// always something to look forward to.
 ///
@@ -93,6 +96,7 @@ class _AvatarScreenState extends ConsumerState<AvatarScreen> {
                       child: FittedBox(
                         child: CharacterPortrait(
                           avatar: me.avatar,
+                          body: wearing(CosmeticCategory.body),
                           outfit: wearing(CosmeticCategory.outfit),
                           headwear: hatKey == defaultHeadwear ? null : headwearFor(hatKey),
                           pet: petKey == defaultPet ? null : petFor(petKey),
@@ -154,6 +158,7 @@ class _AvatarScreenState extends ConsumerState<AvatarScreen> {
             const InlineError("Couldn't load your things. Pull down to try again."),
           ],
           for (final (category, title) in const [
+            (CosmeticCategory.body, 'Body'),
             (CosmeticCategory.outfit, 'Outfits'),
             (CosmeticCategory.headwear, 'Hats'),
             (CosmeticCategory.pet, 'Pets'),
@@ -169,12 +174,107 @@ class _AvatarScreenState extends ConsumerState<AvatarScreen> {
               onWear: (key) => _wear(category, key),
             ),
           ],
+          // AV-5: every body, outfit and hat together, for the team to check
+          // the layers by eye. Not compiled into a release build.
+          if (kDebugMode) ...[
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => _LookCycler(avatar: me.avatar)),
+              ),
+              icon: const Icon(Icons.grid_view_rounded),
+              label: const Text('Debug: check every look'),
+            ),
+          ],
         ],
       ),
     );
 
     if (!widget.showAppBar) return body;
     return Scaffold(appBar: AppBar(title: const Text('My Avatar')), body: body);
+  }
+}
+
+/// Debug builds only (AV-5): steps through every body, outfit and hat
+/// combination, "no hat" included, with the guide boxes drawn over the
+/// character, so all of them can be looked at in a few minutes.
+class _LookCycler extends StatefulWidget {
+  const _LookCycler({required this.avatar});
+
+  final String avatar;
+
+  @override
+  State<_LookCycler> createState() => _LookCyclerState();
+}
+
+class _LookCyclerState extends State<_LookCycler> {
+  static final _looks = [
+    for (final body in bodies.keys)
+      for (final outfit in outfits.keys)
+        for (final hat in headwear.keys) (body, outfit, hat),
+  ];
+
+  var _index = 0;
+  var _guide = true;
+  var _pet = false;
+
+  void _step(int by) => setState(() => _index = (_index + by) % _looks.length);
+
+  @override
+  Widget build(BuildContext context) {
+    final (body, outfit, hat) = _looks[_index];
+    final text = Theme.of(context).textTheme;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Every look')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            child: FittedBox(
+              child: CharacterPortrait(
+                avatar: widget.avatar,
+                body: bodyFor(body),
+                outfit: outfitFor(outfit),
+                headwear: hat == defaultHeadwear ? null : headwearFor(hat),
+                pet: _pet ? pets.values.firstWhere((pet) => pet.asset != null) : null,
+                showGuide: _guide,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text('Look ${_index + 1} of ${_looks.length}', style: text.titleMedium),
+          Text('$body · $outfit · $hat', style: text.bodyMedium),
+          SwitchListTile(
+            title: const Text('Guide boxes'),
+            value: _guide,
+            onChanged: (on) => setState(() => _guide = on),
+          ),
+          SwitchListTile(
+            title: const Text('With a pet'),
+            value: _pet,
+            onChanged: (on) => setState(() => _pet = on),
+          ),
+        ],
+      ),
+      // Pinned, so the buttons stay under the thumb however the names wrap.
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(onPressed: () => _step(-1), child: const Text('Previous')),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(onPressed: () => _step(1), child: const Text('Next')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

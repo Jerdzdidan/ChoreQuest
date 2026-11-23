@@ -1,7 +1,9 @@
 /// What a cosmetic slots into. One item of each can be on at a time, and the
 /// name is what the server stores. Each room slot is its own category, so a
-/// rug, a picture and a plant can all be on at once.
+/// rug, a picture and a plant can all be on at once. The first three are the
+/// character's layers, bottom to top: body, outfit, headwear.
 enum CosmeticCategory {
+  body,
   outfit,
   headwear,
   pet,

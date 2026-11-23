@@ -58,6 +58,7 @@ class ProgressService
                 'scheduled_date' => $assignment->scheduled_date?->toDateString(),
                 'created_on' => $assignment->created_at->copy()->setTimezone($timezone)->toDateString(),
                 'active' => (bool) $assignment->is_active,
+                'days_of_week' => $assignment->days_of_week,
             ])
             ->all();
 

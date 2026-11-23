@@ -18,9 +18,20 @@ class Assignment extends Model
      */
     public const LOCATIONS = ['kitchen', 'bedroom', 'study', 'outdoor', 'other'];
 
+    /** The child's own phone: front or back, flipped by the child. */
+    public const CAMERA_PHONE = 'phone';
+
+    /** A third-party camera the child's phone reported as connected. */
+    public const CAMERA_EXTERNAL = 'external';
+
+    public const CAMERA_SOURCES = [self::CAMERA_PHONE, self::CAMERA_EXTERNAL];
+
+    public const DEFAULT_RINGTONE = 'classic';
+
     protected $fillable = [
         'child_id', 'chore_template_id', 'points',
         'due_time', 'recurrence', 'scheduled_date', 'is_active', 'location',
+        'days_of_week', 'ringtone_key', 'camera_source', 'camera_device_id', 'alarm_enabled',
     ];
 
     protected function casts(): array
@@ -29,7 +40,20 @@ class Assignment extends Model
             'scheduled_date' => 'date',
             'is_active' => 'boolean',
             'points' => 'integer',
+            'days_of_week' => 'array',
+            'alarm_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * Whether a daily quest with these weekdays repeats on [isoWeekday]
+     * (1 Monday to 7 Sunday). No weekdays means every day.
+     *
+     * @param  list<int>|null  $daysOfWeek
+     */
+    public static function repeatsOn(?array $daysOfWeek, int $isoWeekday): bool
+    {
+        return $daysOfWeek === null || in_array($isoWeekday, $daysOfWeek, true);
     }
 
     public function child(): BelongsTo
@@ -43,14 +67,21 @@ class Assignment extends Model
     }
 
     /**
-     * What the child sees today: every active daily assignment, plus any
-     * one-off scheduled for this date.
+     * What the child sees today: every active daily assignment that repeats
+     * on this weekday (or on every day), plus any one-off scheduled for this
+     * date. [date] is the household's own date (TZ3), so its weekday is the
+     * household's weekday.
      */
     public function scopeDueOn(Builder $query, Carbon $date): Builder
     {
         return $query->where('is_active', true)
             ->where(function (Builder $q) use ($date) {
-                $q->where('recurrence', 'daily')
+                $q->where(function (Builder $daily) use ($date) {
+                    $daily->where('recurrence', 'daily')
+                        ->where(fn (Builder $days) => $days
+                            ->whereNull('days_of_week')
+                            ->orWhereJsonContains('days_of_week', $date->isoWeekday()));
+                })
                     ->orWhere(function (Builder $q2) use ($date) {
                         $q2->where('recurrence', 'once')
                             ->whereDate('scheduled_date', $date->toDateString());

@@ -193,6 +193,75 @@ enum Recurrence {
   static Recurrence parse(String? raw) => raw == 'once' ? once : daily;
 }
 
+/// Which camera watches a quest (PS-6). The parent picks between these two
+/// only; with the phone, the child flips between front and back.
+enum CameraSource {
+  /// The child's own phone.
+  phone,
+
+  /// A third-party camera the child's phone reported as connected.
+  external;
+
+  /// Anything this version does not know reads as the phone, which every
+  /// child has.
+  static CameraSource parse(String? raw) => raw == 'external' ? external : phone;
+
+  String get label => switch (this) {
+        phone => 'Phone camera',
+        external => 'Third-party camera',
+      };
+}
+
+/// When a quest rings on the child's phone, and how it is watched (PS-7).
+class QuestSchedule {
+  const QuestSchedule({
+    this.recurrence = Recurrence.daily,
+    this.scheduledDate,
+    this.daysOfWeek,
+    this.alarmTime,
+    this.ringtoneKey = defaultRingtone,
+    this.cameraSource = CameraSource.phone,
+    this.cameraDeviceId,
+    this.alarmEnabled = true,
+  });
+
+  static const defaultRingtone = 'classic';
+
+  final Recurrence recurrence;
+
+  /// The day of a one-time quest.
+  final DateTime? scheduledDate;
+
+  /// The weekdays a daily quest repeats on, as [DateTime.weekday] numbers
+  /// (1 Monday to 7 Sunday). Null means every day, which is what every
+  /// quest set before weekdays existed has.
+  final List<int>? daysOfWeek;
+
+  /// When the alarm rings: the old "Finish by" time.
+  final ClockTime? alarmTime;
+  final String ringtoneKey;
+  final CameraSource cameraSource;
+  final String? cameraDeviceId;
+  final bool alarmEnabled;
+
+  /// Whether a daily quest repeats on [weekday] (1 Monday to 7 Sunday).
+  bool repeatsOn(int weekday) => daysOfWeek == null || daysOfWeek!.contains(weekday);
+
+  /// The fields as the API takes them. A one-time quest always uses the
+  /// phone camera; the server holds to that too.
+  Map<String, Object?> get wire => {
+        'recurrence': recurrence.name,
+        'due_time': alarmTime?.wire,
+        'scheduled_date': recurrence == Recurrence.once && scheduledDate != null ? isoDate(scheduledDate!) : null,
+        'days_of_week': recurrence == Recurrence.daily ? daysOfWeek : null,
+        'ringtone_key': ringtoneKey,
+        'camera_source': recurrence == Recurrence.once ? CameraSource.phone.name : cameraSource.name,
+        'camera_device_id':
+            recurrence == Recurrence.daily && cameraSource == CameraSource.external ? cameraDeviceId : null,
+        'alarm_enabled': alarmEnabled,
+      };
+}
+
 /// A chore given to one child, with the points and schedule the parent chose.
 class Assignment {
   const Assignment({
@@ -205,10 +274,16 @@ class Assignment {
     required this.isActive,
     required this.chore,
     this.location = QuestLocation.other,
+    this.daysOfWeek,
+    this.ringtoneKey = QuestSchedule.defaultRingtone,
+    this.cameraSource = CameraSource.phone,
+    this.cameraDeviceId,
+    this.alarmEnabled = true,
   });
 
   factory Assignment.fromJson(Map<String, dynamic> json) {
     final scheduled = json['scheduled_date'] as String?;
+    final days = json['days_of_week'] as List?;
     return Assignment(
       id: json['id'] as int,
       childId: json['child_id'] as int,
@@ -219,6 +294,11 @@ class Assignment {
       isActive: json['is_active'] as bool? ?? true,
       chore: ChoreTemplate.fromJson(json['chore'] as Map<String, dynamic>),
       location: QuestLocation.parse(json['location'] as String?),
+      daysOfWeek: days == null ? null : [for (final day in days) day as int],
+      ringtoneKey: json['ringtone_key'] as String? ?? QuestSchedule.defaultRingtone,
+      cameraSource: CameraSource.parse(json['camera_source'] as String?),
+      cameraDeviceId: json['camera_device_id'] as String?,
+      alarmEnabled: json['alarm_enabled'] as bool? ?? true,
     );
   }
 
@@ -233,4 +313,23 @@ class Assignment {
 
   /// Where in the home it happens, as the parent set it.
   final QuestLocation location;
+
+  /// The weekdays a daily quest repeats on; null is every day.
+  final List<int>? daysOfWeek;
+  final String ringtoneKey;
+  final CameraSource cameraSource;
+  final String? cameraDeviceId;
+  final bool alarmEnabled;
+
+  /// The schedule as one value, for editing it (PS-7).
+  QuestSchedule get schedule => QuestSchedule(
+        recurrence: recurrence,
+        scheduledDate: scheduledDate,
+        daysOfWeek: daysOfWeek,
+        alarmTime: dueTime,
+        ringtoneKey: ringtoneKey,
+        cameraSource: cameraSource,
+        cameraDeviceId: cameraDeviceId,
+        alarmEnabled: alarmEnabled,
+      );
 }

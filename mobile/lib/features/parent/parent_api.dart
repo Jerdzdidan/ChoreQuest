@@ -81,9 +81,7 @@ class ParentApi {
     required int childId,
     required int templateId,
     required int points,
-    ClockTime? dueTime,
-    Recurrence recurrence = Recurrence.daily,
-    DateTime? scheduledDate,
+    QuestSchedule schedule = const QuestSchedule(),
     QuestLocation location = QuestLocation.other,
   }) async {
     final body = await _api.post(
@@ -92,34 +90,30 @@ class ParentApi {
         'child_id': childId,
         'chore_template_id': templateId,
         'points': points,
-        'due_time': dueTime?.wire,
-        'recurrence': recurrence.name,
-        if (recurrence == Recurrence.once && scheduledDate != null)
-          'scheduled_date': isoDate(scheduledDate),
+        ...schedule.wire,
         'location': location.name,
       },
     );
     return Assignment.fromJson(body['assignment'] as Map<String, dynamic>);
   }
 
+  /// Changes an assignment. A [schedule], when given, replaces the whole
+  /// schedule: the alarm, the repeat and its weekdays, the ringtone and the
+  /// camera (PS-7).
   Future<Assignment> updateAssignment(
     int assignmentId, {
     int? points,
-    ClockTime? dueTime,
-    bool clearDueTime = false,
     bool? isActive,
     QuestLocation? location,
+    QuestSchedule? schedule,
   }) async {
     final body = await _api.patch(
       '/assignments/$assignmentId',
       body: {
         'points': ?points,
-        if (dueTime != null)
-          'due_time': dueTime.wire
-        else if (clearDueTime)
-          'due_time': null,
         'is_active': ?isActive,
         'location': ?location?.name,
+        ...?schedule?.wire,
       },
     );
     return Assignment.fromJson(body['assignment'] as Map<String, dynamic>);

@@ -106,9 +106,17 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
         () => api.updateAssignment(
           existing.id,
           points: _points,
-          dueTime: _due,
-          clearDueTime: _due == null,
           location: _location,
+          schedule: QuestSchedule(
+            recurrence: existing.recurrence,
+            scheduledDate: existing.scheduledDate,
+            daysOfWeek: existing.daysOfWeek,
+            alarmTime: _due,
+            ringtoneKey: existing.ringtoneKey,
+            cameraSource: existing.cameraSource,
+            cameraDeviceId: existing.cameraDeviceId,
+            alarmEnabled: existing.alarmEnabled,
+          ),
         ),
       );
     }
@@ -149,9 +157,7 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
           childId: childId,
           templateId: widget.template.id,
           points: _points,
-          dueTime: _due,
-          recurrence: _recurrence,
-          scheduledDate: _date,
+          schedule: QuestSchedule(recurrence: _recurrence, scheduledDate: _date, alarmTime: _due),
           location: _location,
         );
         ref.invalidate(assignmentsProvider(childId));

@@ -2,6 +2,9 @@
 
 namespace App\Domain\Progress;
 
+use App\Models\Assignment;
+use DateTimeImmutable;
+
 /**
  * How many of the quests a child was given over a run of days they
  * completed: the completion rate on the parent's Activity tab (ACT1).
@@ -12,8 +15,8 @@ namespace App\Domain\Progress;
  *
  * A quest is due on a day when the child's app would have listed it that day
  * under the rules Assignment::scopeDueOn applies today: an active daily
- * assignment that already existed, or an active one-off scheduled for that
- * day. It is done when a photo sent that day for it was approved. One
+ * assignment that already existed and repeats on that weekday (or every
+ * day), or an active one-off scheduled for that day. It is done when a photo sent that day for it was approved. One
  * assignment counts once a day however many photos were sent, so done can
  * never exceed due.
  *
@@ -22,7 +25,7 @@ namespace App\Domain\Progress;
 final class CompletionRate
 {
     /**
-     * @param  list<array{id: int, recurrence: string, scheduled_date: ?string, created_on: string, active: bool}>  $assignments
+     * @param  list<array{id: int, recurrence: string, scheduled_date: ?string, created_on: string, active: bool, days_of_week?: ?list<int>}>  $assignments
      * @param  list<array{assignment_id: int, for_date: string}>  $approved
      * @param  list<string>  $days
      * @return array{due: int, done: int}
@@ -52,7 +55,7 @@ final class CompletionRate
     }
 
     /**
-     * @param  array{id: int, recurrence: string, scheduled_date: ?string, created_on: string, active: bool}  $assignment
+     * @param  array{id: int, recurrence: string, scheduled_date: ?string, created_on: string, active: bool, days_of_week?: ?list<int>}  $assignment
      */
     private function dueOn(array $assignment, string $day): bool
     {
@@ -61,7 +64,8 @@ final class CompletionRate
         }
 
         return match ($assignment['recurrence']) {
-            'daily' => $assignment['created_on'] <= $day,
+            'daily' => $assignment['created_on'] <= $day
+                && Assignment::repeatsOn($assignment['days_of_week'] ?? null, (int) (new DateTimeImmutable($day))->format('N')),
             'once' => $assignment['scheduled_date'] === $day,
             default => false,
         };

@@ -34,6 +34,12 @@
 # Photographs of minors inside their homes. Never committed.
 # Data Privacy Act of 2012 / NPC guidance on children's data.
 /ml/dataset/
+# Clips, frames, features and dataset label files (M2-M4); never committed.
+/ml/data/
+/ml/labels/
+# Trained Keras models and the week-one dummy conversion (M5-M8).
+/ml/artifacts/work/
+/ml/artifacts/dummy/
 /ml/.venv/
 /ml/**/__pycache__/
 *.h5

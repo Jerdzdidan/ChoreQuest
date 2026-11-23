@@ -11,10 +11,18 @@ class ChoreTemplate extends Model
 {
     use HasFactory;
 
+    /** The movement model checks the chore during the quest session. */
+    public const MODE_LSTM = 'lstm';
+
+    /** Only the parent checks it, from the Before and After photos. */
+    public const MODE_MANUAL = 'manual';
+
     protected $fillable = [
-        'name', 'description', 'icon', 'category', 'location',
+        'key', 'name', 'description', 'icon', 'category', 'location',
         'min_age', 'max_age', 'default_points', 'difficulty',
         'has_visible_end_state', 'verification_class',
+        'verification_mode', 'model_class', 'min_active_seconds',
+        'is_custom', 'owner_user_id', 'retired_at',
     ];
 
     protected function casts(): array
@@ -25,12 +33,44 @@ class ChoreTemplate extends Model
             'max_age' => 'integer',
             'default_points' => 'integer',
             'difficulty' => Difficulty::class,
+            'model_class' => 'integer',
+            'min_active_seconds' => 'integer',
+            'is_custom' => 'boolean',
+            'retired_at' => 'datetime',
         ];
     }
 
     public function scopeForAge(Builder $query, int $age): Builder
     {
         return $query->where('min_age', '<=', $age)->where('max_age', '>=', $age);
+    }
+
+    /** Chores still in the catalogue: retired ones keep their history only. */
+    public function scopeOffered(Builder $query): Builder
+    {
+        return $query->whereNull('retired_at');
+    }
+
+    /**
+     * What one parent may see and assign: the shared catalogue and their own
+     * custom chores, never another parent's.
+     */
+    public function scopeVisibleTo(Builder $query, User $parent): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->where('is_custom', false)
+            ->orWhere('owner_user_id', $parent->id));
+    }
+
+    public function isRetired(): bool
+    {
+        return $this->retired_at !== null;
+    }
+
+    /** Whether the movement model checks this chore in a quest session. */
+    public function isMotionChecked(): bool
+    {
+        return $this->verification_mode === self::MODE_LSTM && $this->model_class !== null;
     }
 
     public function suitsAge(int $age): bool

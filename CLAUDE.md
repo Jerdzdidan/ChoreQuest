@@ -16,7 +16,7 @@ reliability, security, maintainability.
 | API      | Laravel 12 + Sanctum                | Laravel 13 needs PHP ^8.3; this machine has PHP 8.2.12 (XAMPP) |
 | Database | MySQL / MariaDB 10.4 (XAMPP)        | Named in the manuscript |
 | Mobile   | Flutter + Riverpod                  | Named in the manuscript |
-| Model    | MobileNetV2 → TensorFlow Lite, int8 | On-device inference is the privacy argument |
+| Model    | MobileNetV2 + LSTM → TensorFlow Lite (backbone int8, temporal float16) | On-device inference is the privacy argument |
 | Training | Python 3.13 + TensorFlow 2.21       | TF 2.21 ships a cp313 Windows wheel |
 
 Changing any of these means editing the manuscript, so raise it before doing it.
@@ -36,18 +36,14 @@ convenience, especially late in the project when a shortcut looks cheap.
    column to any table. Never `UPDATE` or delete a past ledger row. A replayable
    ledger is the reliability evidence.
 
-3. **Verification returns three states, never two:** `auto_approved`,
-   `pending_review`, `auto_rejected`. The middle state — abstention — is the
-   ethical core of the study. A model that is unsure must be allowed to say so
-   and defer to the parent.
+3. **A quest is never credited without a parent's approval.** The model only
+   decides whether the Done button appears and what evidence the parent sees.
 
-4. **Both confidence thresholds live in `allocation_rules`, per child.** Never
-   hard-code them. They must be tunable from the parent settings screen without
-   a rebuild — that is the maintainability evidence.
+4. **Model thresholds live in a server-side model config, tunable without a
+   rebuild.** They are not per-child settings.
 
-5. **A submission keeps both the model's original guess and the parent's final
-   decision.** Chapter 4 computes false-approval and false-rejection rates from
-   that pair. Overwriting the model's guess destroys the data.
+5. **A submission keeps the model's evidence summary and the parent's final
+   decision, never overwritten.** Chapter 4 computes its rates from that pair.
 
 6. **Child authentication is PIN-through-household, never email.** A child picks
    an avatar within their parent's household and enters a 4-digit PIN. Tokens
@@ -56,7 +52,11 @@ convenience, especially late in the project when a shortcut looks cheap.
 
 7. **Chore photos are never publicly reachable.** They are images of minors
    inside their homes. Store outside the public root; serve only through an
-   authenticated, authorised route.
+   authenticated, authorised route. Before and After photos are private, served
+   only through the authenticated parent route.
+
+8. **Camera video never leaves the phone and is never saved.** Frames exist in
+   memory only; the server receives two stills and a small evidence summary.
 
 ## Scope — what NOT to do
 

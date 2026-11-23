@@ -1,0 +1,565 @@
+{
+  "version": 1,
+  "_about": "The single source of truth for which chores exist (the app's catalogue) and which classes the model learns. ml/check_manifest.py enforces the rule that every chore maps to a class in a dataset the team can train from; ml/export_catalogue.py writes the catalogue the server seeds from. model_class numbers the lstm chores; other_class is the extra 'not doing the chore' class.",
+  "datasets": {
+    "epic_kitchens_100": {
+      "name": "EPIC-KITCHENS-100",
+      "licence": "CC BY-NC 4.0",
+      "view": "first-person (head-mounted)",
+      "label_files": "EPIC_100_verb_classes.csv, EPIC_100_noun_classes.csv"
+    },
+    "kinetics_400": {
+      "name": "Kinetics-400",
+      "licence": "research use; clips are web links, some gone",
+      "view": "third-person",
+      "label_files": "kinetics_400 label map"
+    },
+    "egochores": {
+      "name": "EgoChores",
+      "licence": "unknown",
+      "view": "unknown",
+      "label_files": "not supplied yet (CH-1)"
+    }
+  },
+  "categories": [
+    {"key": "kitchen", "name": "Kitchen & dishes"},
+    {"key": "floors", "name": "Floors & surfaces"},
+    {"key": "laundry", "name": "Bedroom & laundry"},
+    {"key": "plants", "name": "Plants & pets"},
+    {"key": "rubbish", "name": "Rubbish"},
+    {"key": "study", "name": "Study"}
+  ],
+  "other_class": 24,
+  "chores": [
+    {
+      "key": "wash_the_dishes",
+      "name": "Wash the dishes",
+      "description": "Wash the dishes and stack them on the rack to dry",
+      "icon": "dishes",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 8,
+      "difficulty": "hard",
+      "verification_mode": "lstm",
+      "model_class": 0,
+      "min_active_seconds": 60,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["wash"], "nouns": ["plate", "bowl", "glass", "cup", "pan", "sponge", "sink"]},
+        {"dataset": "kinetics_400", "labels": ["washing dishes"]}
+      ]
+    },
+    {
+      "key": "dry_the_dishes",
+      "name": "Dry the dishes",
+      "description": "Dry the clean dishes with a towel or set them on the drying rack",
+      "icon": "dry",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 1,
+      "min_active_seconds": 45,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["dry"], "nouns": ["rack:drying", "towel", "plate", "cup"]}
+      ]
+    },
+    {
+      "key": "put_away_the_dishes",
+      "name": "Put away the dishes",
+      "description": "Put the clean plates, bowls and cups back in the cupboard",
+      "icon": "shelves",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 3,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 2,
+      "min_active_seconds": 30,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["plate", "bowl", "cup", "glass", "cupboard", "drawer"]}
+      ]
+    },
+    {
+      "key": "set_the_table",
+      "name": "Set the table",
+      "description": "Lay out the plates, glasses and spoons before a meal",
+      "icon": "plate",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 3,
+      "min_active_seconds": 30,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["setting table"]},
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["plate", "glass", "cutlery", "top"]}
+      ]
+    },
+    {
+      "key": "clear_and_wipe_the_table",
+      "name": "Clear and wipe the table",
+      "description": "Take the dishes off the table after eating and wipe it down",
+      "icon": "table",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 5,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 4,
+      "min_active_seconds": 40,
+      "evidence": "medium",
+      "formerly": ["Clear the table"],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["take", "put", "wash"], "nouns": ["plate", "bowl", "cup", "top", "cloth", "sponge"]}
+      ]
+    },
+    {
+      "key": "put_away_the_groceries",
+      "name": "Put away the groceries",
+      "description": "Help put the shopping into the cupboard and the fridge",
+      "icon": "groceries",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 5,
+      "min_active_seconds": 30,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["put", "take"], "nouns": ["bag", "fridge", "cupboard"]}
+      ]
+    },
+    {
+      "key": "wash_the_rice",
+      "name": "Wash the rice",
+      "description": "Measure the rice and rinse it ready for cooking",
+      "icon": "rice",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 6,
+      "min_active_seconds": 30,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["wash"], "nouns": ["rice"]}
+      ]
+    },
+    {
+      "key": "prepare_a_simple_snack",
+      "name": "Prepare a simple snack",
+      "description": "Prepare a snack that needs no knife and no stove, and clean up after",
+      "icon": "snack",
+      "category": "kitchen",
+      "location": "kitchen",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 5,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 7,
+      "min_active_seconds": 45,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["prepare", "serve"], "nouns": [], "_nouns": "the food nouns, picked in M2 from EPIC_100_noun_classes.csv, leaving out knife and hob"}
+      ]
+    },
+    {
+      "key": "sweep_the_floor",
+      "name": "Sweep the floor",
+      "description": "Sweep one room and collect the dirt into the dustpan",
+      "icon": "broom",
+      "category": "floors",
+      "location": "outdoor",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 5,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 8,
+      "min_active_seconds": 45,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["sweeping floor"]},
+        {"dataset": "epic_kitchens_100", "verbs": ["brush"], "nouns": ["floor", "broom", "dustpan"]}
+      ]
+    },
+    {
+      "key": "mop_the_floor",
+      "name": "Mop the floor",
+      "description": "Mop one room after sweeping it",
+      "icon": "mop",
+      "category": "floors",
+      "location": "other",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 7,
+      "difficulty": "hard",
+      "verification_mode": "lstm",
+      "model_class": 9,
+      "min_active_seconds": 60,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["mopping floor"]},
+        {"dataset": "epic_kitchens_100", "verbs": ["mop", "wash"], "nouns": ["floor"]}
+      ]
+    },
+    {
+      "key": "vacuum_the_floor",
+      "name": "Vacuum the floor",
+      "description": "Vacuum one room, under the table and chairs too",
+      "icon": "vacuum",
+      "category": "floors",
+      "location": "other",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 5,
+      "difficulty": "medium",
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
+      "evidence": "weak",
+      "_why_manual": "Only the EPIC noun-verb pair exists and Kinetics-400 has no vacuuming class: a parent checks it until the team has its own recordings (M10).",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["hoover"], "nouns": ["floor"]}
+      ]
+    },
+    {
+      "key": "wipe_the_window",
+      "name": "Wipe the window",
+      "description": "Wipe the window and the windowsill with a damp cloth",
+      "icon": "cloth",
+      "category": "floors",
+      "location": "other",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 3,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 10,
+      "min_active_seconds": 30,
+      "evidence": "strong",
+      "formerly": ["Wipe the windowsills"],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["cleaning windows"]},
+        {"dataset": "epic_kitchens_100", "verbs": ["wash", "scrub"], "nouns": ["window"]}
+      ]
+    },
+    {
+      "key": "clean_the_sink",
+      "name": "Clean the sink",
+      "description": "Scrub and rinse the sink",
+      "icon": "sink",
+      "category": "floors",
+      "location": "other",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 6,
+      "difficulty": "hard",
+      "verification_mode": "lstm",
+      "model_class": 11,
+      "min_active_seconds": 40,
+      "evidence": "medium",
+      "formerly": ["Clean the bathroom sink"],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["scrub", "wash"], "nouns": ["sink", "sponge"]}
+      ]
+    },
+    {
+      "key": "make_the_bed",
+      "name": "Make the bed",
+      "description": "Straighten the sheet and arrange the pillows",
+      "icon": "bed",
+      "category": "laundry",
+      "location": "bedroom",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 5,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 12,
+      "min_active_seconds": 40,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["making bed"]},
+        {"dataset": "epic_kitchens_100", "verbs": [], "nouns": ["sheets", "pillow"]}
+      ]
+    },
+    {
+      "key": "put_clothes_in_the_hamper",
+      "name": "Put clothes in the hamper",
+      "description": "Dirty clothes go into the laundry basket",
+      "icon": "basket",
+      "category": "laundry",
+      "location": "bedroom",
+      "min_age": 4,
+      "max_age": 7,
+      "points": 2,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 13,
+      "min_active_seconds": 15,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["clothes", "basket"]}
+      ]
+    },
+    {
+      "key": "sort_the_laundry",
+      "name": "Sort the laundry",
+      "description": "Sort the dirty clothes into lights and darks",
+      "icon": "basket",
+      "category": "laundry",
+      "location": "bedroom",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 14,
+      "min_active_seconds": 30,
+      "evidence": "medium",
+      "formerly": ["Sort laundry"],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["sort"], "nouns": ["clothes"]}
+      ]
+    },
+    {
+      "key": "fold_the_clothes",
+      "name": "Fold the clothes",
+      "description": "Fold the towels and clothes and stack them neatly",
+      "icon": "fold",
+      "category": "laundry",
+      "location": "bedroom",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 15,
+      "min_active_seconds": 40,
+      "evidence": "strong",
+      "formerly": ["Fold the small clothes"],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["folding clothes"]},
+        {"dataset": "epic_kitchens_100", "verbs": ["fold"], "nouns": ["clothes", "towel"]}
+      ]
+    },
+    {
+      "key": "hang_the_laundry",
+      "name": "Hang the laundry",
+      "description": "Hang the washing out on the line or the drying rack",
+      "icon": "laundry",
+      "category": "laundry",
+      "location": "outdoor",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 6,
+      "difficulty": "hard",
+      "verification_mode": "lstm",
+      "model_class": 16,
+      "min_active_seconds": 45,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["hang"], "nouns": ["clothes", "airer", "clip"]}
+      ]
+    },
+    {
+      "key": "put_away_your_clothes",
+      "name": "Put away your clothes",
+      "description": "Put your folded clothes into the cabinet",
+      "icon": "wardrobe",
+      "category": "laundry",
+      "location": "bedroom",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 5,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 17,
+      "min_active_seconds": 30,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["clothes", "drawer", "cupboard", "shelf"]}
+      ]
+    },
+    {
+      "key": "clean_your_shoes",
+      "name": "Clean your shoes",
+      "description": "Brush the dirt off your shoes and wipe them clean",
+      "icon": "shoes",
+      "category": "laundry",
+      "location": "other",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 18,
+      "min_active_seconds": 30,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["cleaning shoes", "shining shoes"]}
+      ]
+    },
+    {
+      "key": "water_the_plants",
+      "name": "Water the plants",
+      "description": "Water the plants outside or on the windowsill",
+      "icon": "plant",
+      "category": "plants",
+      "location": "outdoor",
+      "min_age": 6,
+      "max_age": 10,
+      "points": 3,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 19,
+      "min_active_seconds": 20,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["watering plants"]},
+        {"dataset": "epic_kitchens_100", "verbs": ["water"], "nouns": []}
+      ]
+    },
+    {
+      "key": "feed_the_fish",
+      "name": "Feed the fish",
+      "description": "Give the fish a small pinch of food",
+      "icon": "fish",
+      "category": "plants",
+      "location": "other",
+      "min_age": 4,
+      "max_age": 10,
+      "points": 2,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 20,
+      "min_active_seconds": 10,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["feeding fish"]}
+      ]
+    },
+    {
+      "key": "feed_the_birds",
+      "name": "Feed the birds",
+      "description": "Put out seed or fresh water for the birds",
+      "icon": "bird",
+      "category": "plants",
+      "location": "outdoor",
+      "min_age": 4,
+      "max_age": 10,
+      "points": 2,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 21,
+      "min_active_seconds": 15,
+      "evidence": "strong",
+      "formerly": [],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["feeding birds"]}
+      ]
+    },
+    {
+      "key": "throw_rubbish_in_the_bin",
+      "name": "Throw rubbish in the bin",
+      "description": "Put your wrappers and scraps in the bin",
+      "icon": "bin",
+      "category": "rubbish",
+      "location": "other",
+      "min_age": 4,
+      "max_age": 6,
+      "points": 1,
+      "difficulty": "easy",
+      "verification_mode": "lstm",
+      "model_class": 22,
+      "min_active_seconds": 10,
+      "evidence": "medium",
+      "formerly": [],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["throw"], "nouns": ["rubbish", "bin"]}
+      ]
+    },
+    {
+      "key": "empty_the_bin",
+      "name": "Empty the bin",
+      "description": "Tie up the bin bag and take it out to the collection point",
+      "icon": "trash",
+      "category": "rubbish",
+      "location": "outdoor",
+      "min_age": 8,
+      "max_age": 10,
+      "points": 4,
+      "difficulty": "medium",
+      "verification_mode": "lstm",
+      "model_class": 23,
+      "min_active_seconds": 20,
+      "evidence": "medium",
+      "formerly": ["Take out the rubbish"],
+      "sources": [
+        {"dataset": "epic_kitchens_100", "verbs": ["empty"], "nouns": ["bin", "bag"]}
+      ]
+    },
+    {
+      "key": "read_a_book",
+      "name": "Read a book",
+      "description": "Read a book for ten minutes",
+      "icon": "books",
+      "category": "study",
+      "location": "study",
+      "min_age": 5,
+      "max_age": 10,
+      "points": 3,
+      "difficulty": "easy",
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
+      "evidence": "strong label, weak motion",
+      "_why_manual": "Kinetics-400 has the label, but reading shows almost no movement to see: a parent checks it until recordings show the model can tell it from sitting still.",
+      "formerly": ["Read 10 minutes"],
+      "sources": [
+        {"dataset": "kinetics_400", "labels": ["reading book"]}
+      ]
+    }
+  ]
+}

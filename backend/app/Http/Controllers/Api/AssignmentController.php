@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
-use App\Models\Child;
 use App\Models\ChoreTemplate;
-use App\Models\DeviceCamera;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -74,7 +72,7 @@ class AssignmentController extends Controller
             // Where in the home it happens, chosen by the parent. Without one,
             // the quest is grouped under "other" on the child's map.
             'location' => $data['location'] ?? 'other',
-            ...$this->schedule($data, $child),
+            ...$this->schedule($data),
         ]);
 
         return response()->json(['assignment' => $this->payload($assignment->load('template'))], 201);
@@ -99,7 +97,7 @@ class AssignmentController extends Controller
         // checked as if it were new.
         $schedule = array_intersect_key($data, array_flip([
             'due_time', 'recurrence', 'scheduled_date', 'days_of_week',
-            'ringtone_key', 'camera_source', 'camera_device_id', 'alarm_enabled',
+            'ringtone_key', 'camera_source', 'alarm_enabled',
         ]));
         $rest = array_diff_key($data, $schedule);
 
@@ -110,10 +108,8 @@ class AssignmentController extends Controller
                 'scheduled_date' => $assignment->scheduled_date?->toDateString(),
                 'days_of_week' => $assignment->days_of_week,
                 'ringtone_key' => $assignment->ringtone_key,
-                'camera_source' => $assignment->camera_source,
-                'camera_device_id' => $assignment->camera_device_id,
                 'alarm_enabled' => $assignment->alarm_enabled,
-            ], $assignment->child, $assignment->camera_device_id);
+            ]);
         }
 
         $assignment->update($rest);
@@ -165,50 +161,29 @@ class AssignmentController extends Controller
             // A key from the app's ringtone registry; its shape is all the
             // server can check.
             'ringtone_key' => ['sometimes', 'string', 'regex:/^[a-z0-9_]{1,30}$/'],
+            // The phone's back camera only (CAM-1). An older phone that still
+            // sends phone and no camera is fine.
             'camera_source' => ['sometimes', 'string', Rule::in(Assignment::CAMERA_SOURCES)],
-            'camera_device_id' => ['nullable', 'string', 'max:100'],
+            'camera_device_id' => ['prohibited'],
             'alarm_enabled' => ['sometimes', 'boolean'],
         ];
     }
 
     /**
      * The stored schedule for what was sent, with the rules that hold across
-     * fields: a one-time quest needs its date, has no weekdays and always
-     * uses the phone camera (the parent sees no camera control for it); a
-     * daily quest has no date; a third-party camera must be named, and be
-     * one the child's phone has reported (BE-8). A camera already on the
-     * assignment is kept even if the phone no longer lists it, so editing
-     * the alarm never fails over it; the session falls back to the phone
-     * camera when it is missing (DV-12).
+     * fields: a one-time quest needs its date and has no weekdays; a daily
+     * quest has no date. Every quest uses the phone's back camera (CAM-1).
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function schedule(array $data, Child $child, ?string $currentCamera = null): array
+    private function schedule(array $data): array
     {
         $recurrence = $data['recurrence'] ?? 'daily';
 
         if ($recurrence === 'once' && empty($data['scheduled_date'])) {
             throw ValidationException::withMessages([
                 'scheduled_date' => ['A one-off chore needs the date it is due.'],
-            ]);
-        }
-
-        $camera = $recurrence === 'once'
-            ? Assignment::CAMERA_PHONE
-            : ($data['camera_source'] ?? Assignment::CAMERA_PHONE);
-
-        if ($camera === Assignment::CAMERA_EXTERNAL && empty($data['camera_device_id'])) {
-            throw ValidationException::withMessages([
-                'camera_device_id' => ['Choose which third-party camera to use.'],
-            ]);
-        }
-
-        if ($camera === Assignment::CAMERA_EXTERNAL
-            && $data['camera_device_id'] !== $currentCamera
-            && ! DeviceCamera::where('child_id', $child->id)->thirdParty()->where('camera_key', $data['camera_device_id'])->exists()) {
-            throw ValidationException::withMessages([
-                'camera_device_id' => ["That camera has not been connected to {$child->name}'s phone."],
             ]);
         }
 
@@ -224,8 +199,8 @@ class AssignmentController extends Controller
             'scheduled_date' => $recurrence === 'once' ? $data['scheduled_date'] : null,
             'days_of_week' => $recurrence === 'daily' ? $days : null,
             'ringtone_key' => $data['ringtone_key'] ?? Assignment::DEFAULT_RINGTONE,
-            'camera_source' => $camera,
-            'camera_device_id' => $camera === Assignment::CAMERA_EXTERNAL ? $data['camera_device_id'] : null,
+            'camera_source' => Assignment::CAMERA_PHONE,
+            'camera_device_id' => null,
             'alarm_enabled' => $data['alarm_enabled'] ?? true,
         ];
     }

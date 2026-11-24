@@ -18,13 +18,17 @@ class Assignment extends Model
      */
     public const LOCATIONS = ['kitchen', 'bedroom', 'study', 'outdoor', 'other'];
 
-    /** The child's own phone: front or back, flipped by the child. */
+    /** The child's own phone, its back camera on a strap (CAM-1). */
     public const CAMERA_PHONE = 'phone';
 
-    /** A third-party camera the child's phone reported as connected. */
+    /**
+     * A third-party camera, before Phase 5. No quest uses one now; the name
+     * stays so older submissions still read.
+     */
     public const CAMERA_EXTERNAL = 'external';
 
-    public const CAMERA_SOURCES = [self::CAMERA_PHONE, self::CAMERA_EXTERNAL];
+    /** What a quest can be scheduled with: the phone only, since CAM-1. */
+    public const CAMERA_SOURCES = [self::CAMERA_PHONE];
 
     public const DEFAULT_RINGTONE = 'classic';
 

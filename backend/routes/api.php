@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChildAuthController;
 use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\ChoreTemplateController;
-use App\Http\Controllers\Api\DeviceCameraController;
 use App\Http\Controllers\Api\DeviceStatusController;
 use App\Http\Controllers\Api\FamilyQuestController;
 use App\Http\Controllers\Api\LedgerController;
@@ -105,9 +104,6 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
     // One child's figures for the Activity tab: completion, streak, XP, week.
     Route::get('/children/{child}/activity', [ProgressController::class, 'activity']);
 
-    // The third-party cameras connected to a child's phone right now (BE-8).
-    Route::get('/children/{child}/cameras', [DeviceCameraController::class, 'index']);
-
     // Quests the whole household works on together (F1, F2).
     Route::get('/family-quests', [FamilyQuestController::class, 'index']);
     Route::post('/family-quests', [FamilyQuestController::class, 'store']);
@@ -151,9 +147,6 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
     Route::post('/my/cosmetics', [MyCosmeticsController::class, 'store']);
     // Put on one item the child owns: one per category at a time.
     Route::patch('/my/cosmetics', [MyCosmeticsController::class, 'update']);
-
-    // The cameras this phone can see, replacing what it reported before (BE-8).
-    Route::post('/my/cameras', [DeviceCameraController::class, 'store']);
 
     // Everything the phone needs to arm its alarms offline (BE-7).
     Route::get('/my/schedule', [MyScheduleController::class, 'show']);

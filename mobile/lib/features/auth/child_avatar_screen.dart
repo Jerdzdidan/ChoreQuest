@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/session/session_controller.dart';
-import '../../shared/avatars.dart';
 import '../../shared/inline_error.dart';
 import 'child_household_screen.dart';
 import 'child_pin_screen.dart';
 import 'household_api.dart';
+import 'profile_tile.dart';
 
 /// "Who are you?" Every child in the household, as a face to tap.
 class ChildAvatarScreen extends ConsumerStatefulWidget {
@@ -111,8 +111,9 @@ class _ChildAvatarScreenState extends ConsumerState<ChildAvatarScreen> {
                     itemCount: roster.children.length,
                     itemBuilder: (context, i) {
                       final profile = roster.children[i];
-                      return _ProfileTile(
-                        profile: profile,
+                      return ProfileTile(
+                        avatar: profile.avatar,
+                        name: profile.name,
                         onTap: () => _openPin(profile, roster.code),
                       );
                     },
@@ -126,41 +127,6 @@ class _ChildAvatarScreenState extends ConsumerState<ChildAvatarScreen> {
               ],
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileTile extends StatelessWidget {
-  const _ProfileTile({required this.profile, required this.onTap});
-
-  final RosterChild profile;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AvatarBadge(profile.avatar, size: 96),
-            const SizedBox(height: 12),
-            Text(
-              profile.name,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ],
         ),
       ),
     );

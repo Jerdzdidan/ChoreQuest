@@ -54,14 +54,17 @@ class SessionController extends AsyncNotifier<Session> {
       '/login',
       body: {'email': email, 'password': password},
     );
+    await _rememberGrownUp(body);
     await _adopt(ParentSession.fromAuthResponse(body));
     unawaited(_reportTimezone());
   }
 
+  /// [pin] is the optional "Set a 4-digit PIN" step (PA-6); null skips it.
   Future<void> registerParent({
     required String name,
     required String email,
     required String password,
+    String? pin,
   }) async {
     final body = await _api.post(
       '/register',
@@ -70,10 +73,44 @@ class SessionController extends AsyncNotifier<Session> {
         'email': email,
         'password': password,
         'password_confirmation': password,
+        'pin': ?pin,
       },
+    );
+    await _rememberGrownUp(body);
+    await _adopt(ParentSession.fromAuthResponse(body));
+    unawaited(_reportTimezone());
+  }
+
+  /// A grown-up's PIN (PA-5), on a phone where they signed in with their
+  /// password before: the ticket kept from that sign-in goes with it. A
+  /// wrong PIN is an [ApiRejected] saying how many tries are left; the
+  /// fifth, or a PIN that is off, an [ApiLocked] sending them to email and
+  /// password.
+  Future<void> signInParentWithPin({
+    required String householdCode,
+    required int parentId,
+    required String pin,
+  }) async {
+    final ticket = (await _store.readGrownUps())[parentId]?.pinTicket;
+    if (ticket == null) {
+      throw const ApiLocked('Sign in with your email and password on this phone first.');
+    }
+    final body = await _api.post(
+      '/parent/pin-login',
+      body: {'household_code': householdCode, 'parent_id': parentId, 'pin': pin, 'pin_ticket': ticket},
     );
     await _adopt(ParentSession.fromAuthResponse(body));
     unawaited(_reportTimezone());
+  }
+
+  /// The signed-in parent showed their password again (a new PIN or a new
+  /// password), and the server sent this phone a new pin ticket.
+  Future<void> rememberPinTicket(String ticket) async {
+    final current = state;
+    if (current is! AsyncData<Session>) return;
+    final session = current.value;
+    if (session is! ParentSession) return;
+    await _store.rememberGrownUp(session.id, email: session.email, pinTicket: ticket);
   }
 
   Future<void> signInChild({
@@ -111,7 +148,10 @@ class SessionController extends AsyncNotifier<Session> {
     if (current is! AsyncData<Session>) return;
     final session = current.value;
     if (session is! ParentSession) return;
-    await _adopt(session.withProfile(parent));
+    final updated = session.withProfile(parent);
+    // A changed email is the one to fill in next time.
+    await _store.rememberGrownUp(updated.id, email: updated.email);
+    await _adopt(updated);
   }
 
   /// The signed-in child changed their own profile, and the server has
@@ -132,6 +172,19 @@ class SessionController extends AsyncNotifier<Session> {
       api: _api,
       readTimezone: ref.read(readTimezoneProvider),
     ).report();
+  }
+
+  /// After a password sign-in the phone remembers the household, so
+  /// "I'm a grown-up" opens "Who are you?" next time, and this grown-up's
+  /// email and pin ticket (rule 6).
+  Future<void> _rememberGrownUp(Map<String, dynamic> body) async {
+    final parent = body['parent'] as Map<String, dynamic>;
+    await _store.writeHouseholdCode(parent['household_code'] as String);
+    await _store.rememberGrownUp(
+      parent['id'] as int,
+      email: parent['email'] as String,
+      pinTicket: body['pin_ticket'] as String?,
+    );
   }
 
   Future<void> _adopt(Session session) async {

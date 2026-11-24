@@ -37,9 +37,10 @@ final class ParentSession extends Session {
     required this.email,
     required this.householdCode,
     this.avatar = 'owl',
+    this.hasPin = false,
   });
 
-  /// From the body of POST /login or POST /register.
+  /// From the body of POST /login, POST /register or POST /parent/pin-login.
   factory ParentSession.fromAuthResponse(Map<String, dynamic> body) {
     final parent = body['parent'] as Map<String, dynamic>;
     return ParentSession(
@@ -49,6 +50,7 @@ final class ParentSession extends Session {
       email: parent['email'] as String,
       householdCode: parent['household_code'] as String,
       avatar: parent['avatar'] as String? ?? 'owl',
+      hasPin: parent['has_pin'] as bool? ?? false,
     );
   }
 
@@ -60,6 +62,7 @@ final class ParentSession extends Session {
         householdCode: json['household_code'] as String,
         // Sessions stored before parents had a picture fall back to the default.
         avatar: json['avatar'] as String? ?? 'owl',
+        hasPin: json['has_pin'] as bool? ?? false,
       );
 
   @override
@@ -74,6 +77,9 @@ final class ParentSession extends Session {
   /// The parent's own picture, from the same set the children pick from.
   final String avatar;
 
+  /// Whether they have a sign-in PIN (PA-6).
+  final bool hasPin;
+
   /// Refreshes profile fields from GET /me, keeping the same token.
   ParentSession withProfile(Map<String, dynamic> parent) => ParentSession(
         token: token,
@@ -82,6 +88,7 @@ final class ParentSession extends Session {
         email: parent['email'] as String,
         householdCode: parent['household_code'] as String,
         avatar: parent['avatar'] as String? ?? avatar,
+        hasPin: parent['has_pin'] as bool? ?? hasPin,
       );
 
   @override
@@ -93,6 +100,7 @@ final class ParentSession extends Session {
         'email': email,
         'household_code': householdCode,
         'avatar': avatar,
+        'has_pin': hasPin,
       };
 }
 

@@ -8,16 +8,31 @@ class RosterChild {
   final String avatar;
 }
 
+/// A grown-up in the household, for the grown-up "Who are you?" (PA-5).
+class RosterParent {
+  const RosterParent({required this.id, required this.name, required this.avatar, required this.pin});
+
+  final int id;
+  final String name;
+  final String avatar;
+
+  /// Whether their PIN can be used now: set, and not turned off by wrong
+  /// tries.
+  final bool pin;
+}
+
 class HouseholdRoster {
   const HouseholdRoster({
     required this.code,
     required this.householdName,
     required this.children,
+    this.parents = const [],
   });
 
   final String code;
   final String householdName;
   final List<RosterChild> children;
+  final List<RosterParent> parents;
 }
 
 /// The avatar picker's data: first names and faces only. The server keeps this
@@ -40,9 +55,22 @@ Future<HouseholdRoster> fetchHouseholdRoster(ApiClient api, String code) async {
       )
       .toList();
 
+  final parents = (body['parents'] as List? ?? const [])
+      .cast<Map<String, dynamic>>()
+      .map(
+        (p) => RosterParent(
+          id: p['id'] as int,
+          name: p['name'] as String,
+          avatar: p['avatar'] as String? ?? 'owl',
+          pin: p['pin'] as bool? ?? false,
+        ),
+      )
+      .toList();
+
   return HouseholdRoster(
     code: normalised,
     householdName: body['household'] as String? ?? '',
     children: children,
+    parents: parents,
   );
 }

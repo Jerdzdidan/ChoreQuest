@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/session/session_controller.dart';
 import 'child_avatar_screen.dart';
 import 'child_household_screen.dart';
+import 'grown_up_who_screen.dart';
 import 'parent_sign_in_screen.dart';
 
 /// The first thing anyone sees: two doors, sized for the smallest hand that
@@ -21,6 +22,19 @@ class WelcomeScreen extends ConsumerWidget {
         builder: (_) => code == null
             ? const ChildHouseholdScreen()
             : ChildAvatarScreen(householdCode: code),
+      ),
+    );
+  }
+
+  /// A phone that knows its household asks "Who are you?" (PA-5); the
+  /// first time, email and password.
+  Future<void> _openGrownUp(BuildContext context, WidgetRef ref) async {
+    final code = await ref.read(sessionStoreProvider).readHouseholdCode();
+    if (!context.mounted) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => code == null ? const ParentSignInScreen() : GrownUpWhoScreen(householdCode: code),
       ),
     );
   }
@@ -72,11 +86,7 @@ class WelcomeScreen extends ConsumerWidget {
                       _Door(
                         emoji: '👩👨',
                         label: "I'm a grown-up",
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ParentSignInScreen(),
-                          ),
-                        ),
+                        onTap: () => _openGrownUp(context, ref),
                       ),
                       const Spacer(),
                     ],

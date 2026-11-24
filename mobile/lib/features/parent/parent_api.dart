@@ -219,8 +219,9 @@ class ParentApi {
 
   /// Changes the parent's own account. Only what is passed changes; a new
   /// password needs the current one, which the server checks. Returns the
-  /// account as saved, shaped like the `parent` in a sign-in response.
-  Future<Map<String, dynamic>> updateAccount({
+  /// account as saved, shaped like the `parent` in a sign-in response, and
+  /// after a new password the pin ticket this phone now needs (rule 6).
+  Future<({Map<String, dynamic> parent, String? pinTicket})> updateAccount({
     String? name,
     String? email,
     String? avatar,
@@ -238,8 +239,22 @@ class ParentApi {
         'current_password': ?currentPassword,
       },
     );
-    return body['parent'] as Map<String, dynamic>;
+    return (parent: body['parent'] as Map<String, dynamic>, pinTicket: body['pin_ticket'] as String?);
   }
+
+  /// Sets or changes the parent's sign-in PIN (PA-6), after their password.
+  /// Returns the account as saved and this phone's pin ticket.
+  Future<({Map<String, dynamic> parent, String pinTicket})> setPin({
+    required String pin,
+    required String currentPassword,
+  }) async {
+    final body = await _api.put('/me/pin', body: {'pin': pin, 'current_password': currentPassword});
+    return (parent: body['parent'] as Map<String, dynamic>, pinTicket: body['pin_ticket'] as String);
+  }
+
+  /// Turns the sign-in PIN off. Returns the account as saved.
+  Future<Map<String, dynamic>> removePin() async =>
+      (await _api.delete('/me/pin'))['parent'] as Map<String, dynamic>;
 
   /// The latest 100 photos across the household as notifications, and how
   /// many arrived since the list was last opened.

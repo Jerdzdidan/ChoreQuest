@@ -4,11 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/session/session_controller.dart';
 import '../../shared/inline_error.dart';
+import '../../shared/password_field.dart';
+import 'password_reset_screen.dart';
+import 'set_pin_screen.dart';
 
 /// Sign in, or create a parent account. One screen with a toggle rather than
-/// two, since the only difference between them is a name field.
+/// two, since the only difference between them is a name field. Creating an
+/// account offers a 4-digit PIN, which can be skipped (PA-6).
 class ParentSignInScreen extends ConsumerStatefulWidget {
-  const ParentSignInScreen({super.key});
+  const ParentSignInScreen({
+    super.key,
+    this.initialEmail,
+    this.registering = false,
+    this.notice,
+  });
+
+  /// Filled in when the phone knows who is signing in.
+  final String? initialEmail;
+
+  /// Opens on "Create a parent account".
+  final bool registering;
+
+  /// Why they are here, such as five wrong PINs.
+  final String? notice;
 
   @override
   ConsumerState<ParentSignInScreen> createState() => _ParentSignInScreenState();
@@ -17,12 +35,13 @@ class ParentSignInScreen extends ConsumerStatefulWidget {
 class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _email = TextEditingController();
+  late final _email = TextEditingController(text: widget.initialEmail ?? '');
   final _password = TextEditingController();
 
-  bool _registering = false;
+  late bool _registering = widget.registering;
   bool _busy = false;
   ApiException? _error;
+  late String? _notice = widget.notice;
 
   @override
   void dispose() {
@@ -35,9 +54,20 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
   Future<void> _submit() async {
     if (!(_form.currentState?.validate() ?? false)) return;
 
+    // The optional PIN step comes before the account is made: once it is,
+    // the app opens the parent home straight away.
+    PinChoice? choice;
+    if (_registering) {
+      choice = await Navigator.of(context).push<PinChoice>(
+        MaterialPageRoute(builder: (_) => const SetPinScreen(skippable: true)),
+      );
+      if (choice == null || !mounted) return;
+    }
+
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
 
     final session = ref.read(sessionProvider.notifier);
@@ -47,6 +77,7 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
           name: _name.text.trim(),
           email: _email.text.trim(),
           password: _password.text,
+          pin: choice?.pin,
         );
       } else {
         await session.signInParent(
@@ -67,6 +98,20 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
     setState(() {
       _registering = !_registering;
       _error = null;
+      _notice = null;
+    });
+  }
+
+  Future<void> _forgot() async {
+    final done = await Navigator.of(context).push<PasswordResetDone>(
+      MaterialPageRoute(builder: (_) => PasswordResetScreen(initialEmail: _email.text.trim())),
+    );
+    if (done == null || !mounted) return;
+    setState(() {
+      _email.text = done.email;
+      _password.clear();
+      _error = null;
+      _notice = done.message;
     });
   }
 
@@ -93,6 +138,10 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              if (_notice case final notice?) ...[
+                _Notice(notice),
+                const SizedBox(height: 16),
+              ],
               if (showBanner) ...[
                 InlineError(error.message),
                 const SizedBox(height: 16),
@@ -127,16 +176,12 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
                     : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              PasswordField(
                 controller: _password,
                 enabled: !_busy,
-                obscureText: true,
-                autofillHints: const [AutofillHints.password],
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  helperText: _registering ? 'At least 8 characters' : null,
-                  errorText: rejected?.errorFor('password'),
-                ),
+                newPassword: _registering,
+                helperText: _registering ? 'At least 8 characters' : null,
+                errorText: rejected?.errorFor('password'),
                 validator: (v) {
                   final value = v ?? '';
                   if (value.isEmpty) return 'Enter your password.';
@@ -145,7 +190,7 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
                   }
                   return null;
                 },
-                onFieldSubmitted: (_) {
+                onSubmitted: (_) {
                   if (!_busy) _submit();
                 },
               ),
@@ -159,6 +204,11 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
                       )
                     : Text(_registering ? 'Create account' : 'Sign in'),
               ),
+              if (!_registering)
+                TextButton(
+                  onPressed: _busy ? null : _forgot,
+                  child: const Text('Forgot your password?'),
+                ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _busy ? null : _toggleMode,
@@ -170,6 +220,39 @@ class _ParentSignInScreenState extends ConsumerState<ParentSignInScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A calm line above the form: why the grown-up is here, or that their
+/// password was changed.
+class _Notice extends StatelessWidget {
+  const _Notice(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, color: scheme.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message, style: TextStyle(color: scheme.onSecondaryContainer)),
+            ),
+          ],
         ),
       ),
     );

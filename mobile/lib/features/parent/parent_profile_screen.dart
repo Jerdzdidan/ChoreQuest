@@ -7,8 +7,10 @@ import '../../core/session/session_controller.dart';
 import '../../shared/avatars.dart';
 import '../../shared/credits_screen.dart';
 import '../../shared/inline_error.dart';
+import '../../shared/password_field.dart';
 import 'child_form_screen.dart';
 import 'parent_providers.dart';
+import 'sign_in_pin_screen.dart';
 
 /// The parent's own account: their picture, name, email and password.
 ///
@@ -34,6 +36,7 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
   bool _loaded = false;
   bool _savingDetails = false;
   bool _savingPassword = false;
+  bool _savingPin = false;
   String? _detailsError;
   String? _passwordError;
 
@@ -68,7 +71,7 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
             email: _email.text.trim(),
             avatar: _avatar,
           );
-      await ref.read(sessionProvider.notifier).adoptParentProfile(saved);
+      await ref.read(sessionProvider.notifier).adoptParentProfile(saved.parent);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Account saved.')));
@@ -91,10 +94,14 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
       _passwordError = null;
     });
     try {
-      await ref.read(parentApiProvider).updateAccount(
+      final saved = await ref.read(parentApiProvider).updateAccount(
             password: _newPassword.text,
             currentPassword: _currentPassword.text,
           );
+      // A new password retires every phone's pin ticket; this one gets a
+      // fresh one, so the PIN keeps working here.
+      final ticket = saved.pinTicket;
+      if (ticket != null) await ref.read(sessionProvider.notifier).rememberPinTicket(ticket);
       if (!mounted) return;
       _currentPassword.clear();
       _newPassword.clear();
@@ -109,6 +116,47 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
       if (mounted) setState(() => _passwordError = e.message);
     } finally {
       if (mounted) setState(() => _savingPassword = false);
+    }
+  }
+
+  /// "Set up a PIN" or "Change PIN" (PA-6).
+  Future<void> _setPin({required bool changing}) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => SignInPinScreen(changing: changing)),
+    );
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(changing ? 'Your PIN is changed.' : 'Your PIN is set.')),
+      );
+    }
+  }
+
+  /// "Turn off PIN": a PIN only takes the password's place, so turning it
+  /// off asks nothing more than a yes.
+  Future<void> _turnOffPin() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Turn off your PIN?'),
+        content: const Text('You will sign in with your email and password.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Turn off PIN')),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+    setState(() => _savingPin = true);
+    try {
+      final saved = await ref.read(parentApiProvider).removePin();
+      await ref.read(sessionProvider.notifier).adoptParentProfile(saved);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your PIN is off.')));
+      }
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _savingPin = false);
     }
   }
 
@@ -217,22 +265,20 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
+              PasswordField(
                 controller: _currentPassword,
                 enabled: !_savingPassword,
-                obscureText: true,
-                decoration:
-                    const InputDecoration(labelText: 'Current password'),
+                labelText: 'Current password',
                 validator: (v) => (v == null || v.isEmpty)
                     ? 'Enter your current password.'
                     : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              PasswordField(
                 controller: _newPassword,
                 enabled: !_savingPassword,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'New password'),
+                labelText: 'New password',
+                newPassword: true,
                 validator: (v) => (v == null || v.length < 8)
                     ? 'Use at least 8 characters.'
                     : null,
@@ -254,6 +300,39 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
             ],
           ),
         ),
+        const Divider(height: 40),
+        Text('Sign-in PIN', style: text.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          parent.hasPin
+              ? 'On. On a phone where you have signed in with your password, you can sign in with 4 numbers. '
+                  'After 5 wrong tries you will need your password.'
+              : 'Off. You sign in with your email and password.',
+          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        if (!parent.hasPin)
+          OutlinedButton.icon(
+            onPressed: _savingPin ? null : () => _setPin(changing: false),
+            icon: const Icon(Icons.pin_outlined),
+            label: const Text('Set up a PIN'),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _savingPin ? null : () => _setPin(changing: true),
+                icon: const Icon(Icons.pin_outlined),
+                label: const Text('Change PIN'),
+              ),
+              TextButton(
+                onPressed: _savingPin ? null : _turnOffPin,
+                child: const Text('Turn off PIN'),
+              ),
+            ],
+          ),
         const Divider(height: 40),
         Text('Your children', style: text.titleMedium),
         const SizedBox(height: 4),

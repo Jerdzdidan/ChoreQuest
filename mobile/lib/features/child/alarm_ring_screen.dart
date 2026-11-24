@@ -8,6 +8,7 @@ import '../../core/alarm/alarm_safety_net.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/models/chore.dart';
 import '../../shared/chore_icons.dart';
+import '../../shared/password_field.dart';
 import '../../shared/theme.dart';
 import 'live_camera_screen.dart';
 import 'quest_session_providers.dart';
@@ -207,14 +208,7 @@ class _GrownUpStopDialogState extends State<_GrownUpStopDialog> {
         children: [
           const Text('For a grown-up: your ChoreQuest password stops this alarm. You will see that it was stopped.'),
           const SizedBox(height: 12),
-          TextField(
-            controller: _password,
-            obscureText: true,
-            autofillHints: const [AutofillHints.password],
-            enabled: !_busy,
-            decoration: InputDecoration(labelText: 'Password', errorText: _error),
-            onSubmitted: (_) => _stop(),
-          ),
+          PasswordField(controller: _password, enabled: !_busy, errorText: _error, onSubmitted: (_) => _stop()),
         ],
       ),
       actions: [

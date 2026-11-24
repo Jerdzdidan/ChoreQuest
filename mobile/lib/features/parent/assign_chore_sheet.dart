@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/models/api_dates.dart';
-import '../../core/models/camera.dart';
 import '../../core/models/child_profile.dart';
 import '../../core/models/chore.dart';
 import '../../shared/avatars.dart';
@@ -13,6 +12,7 @@ import '../../shared/inline_error.dart';
 import '../../shared/quest_places.dart';
 import '../../shared/ringtones.dart';
 import '../../shared/schedule_text.dart';
+import '../../shared/strap.dart';
 import '../../shared/verification_tag.dart';
 import 'parent_api.dart';
 import 'parent_providers.dart';
@@ -22,10 +22,11 @@ import 'ringtone_field.dart';
 /// Pops `true` on success.
 ///
 /// One-time or daily comes first (PS-3), and decides what is asked below
-/// it: a one-time quest has a day, an alarm and a ringtone and nothing else
-/// (PS-4); a daily quest has the weekdays it repeats on, an alarm, a
-/// ringtone and the camera (PS-5, PS-6). Everything, the repeat included,
-/// can be changed later.
+/// it: a one-time quest has a day, an alarm and a ringtone (PS-4); a daily
+/// quest has the weekdays it repeats on, an alarm and a ringtone (PS-5).
+/// Everything, the repeat included, can be changed later. Every quest is
+/// watched through the child's phone on a strap, and a quest the model
+/// checks says so (CAM-3).
 class AssignChoreSheet extends ConsumerStatefulWidget {
   const AssignChoreSheet({
     super.key,
@@ -54,8 +55,6 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
   late final Set<int> _days = {...widget.existing?.daysOfWeek ?? everyDay};
   late ClockTime? _alarm = widget.existing?.dueTime;
   late String _ringtone = widget.existing?.ringtoneKey ?? defaultRingtone;
-  late CameraSource _camera = widget.existing?.cameraSource ?? CameraSource.phone;
-  late String? _cameraId = widget.existing?.cameraDeviceId;
 
   // Ticked to start with, unless this chore is outside that child's age
   // range: the server would refuse it, and the checkbox shows it unticked.
@@ -69,10 +68,6 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
   String? _error;
 
   bool get _editing => widget.existing != null;
-
-  /// The one child whose phone a third-party camera would belong to: the
-  /// child being edited, or the only child ticked. Null with several ticked.
-  int? get _cameraChildId => widget.existing?.childId ?? (_selected.length == 1 ? _selected.first : null);
 
   String _nameOf(int id) {
     for (final child in ref.read(childrenProvider).value ?? const <ChildProfile>[]) {
@@ -106,15 +101,7 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
   }
 
   void _setChild(int id, bool on) {
-    setState(() {
-      on ? _selected.add(id) : _selected.remove(id);
-      // A third-party camera belongs to one child's phone: with that child
-      // no longer the only one, it goes back to the phone camera.
-      if (_cameraChildId == null) {
-        _camera = CameraSource.phone;
-        _cameraId = null;
-      }
-    });
+    setState(() => on ? _selected.add(id) : _selected.remove(id));
   }
 
   /// The schedule as it stands, or what is missing from it.
@@ -122,8 +109,6 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
     final daily = _recurrence == Recurrence.daily;
     if (!daily && _date == null) return (null, 'Choose the day this quest is for.');
     if (daily && _days.isEmpty) return (null, 'Choose at least one day of the week.');
-    final external = daily && _camera == CameraSource.external;
-    if (external && _cameraId == null) return (null, 'Choose which third-party camera to use.');
 
     final days = [..._days]..sort();
     return (
@@ -134,8 +119,6 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
         daysOfWeek: daily && _days.length < 7 ? days : null,
         alarmTime: _alarm,
         ringtoneKey: _ringtone,
-        cameraSource: external ? CameraSource.external : CameraSource.phone,
-        cameraDeviceId: external ? _cameraId : null,
         alarmEnabled: widget.existing?.alarmEnabled ?? true,
       ),
       null,
@@ -255,7 +238,6 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
     final alarm = _alarm;
     final date = _date;
     final error = _error;
-    final cameraChild = _cameraChildId;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
@@ -286,6 +268,11 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
                 widget.template.description,
                 style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
               ),
+            ],
+            // Decision 1: the model sees the chore only from a phone on a strap.
+            if (widget.template.verificationMode == VerificationMode.motion) ...[
+              const SizedBox(height: 12),
+              const StrapNotice(text: strapAssignWarning),
             ],
             const SizedBox(height: 16),
             // PS-3: asked first, and it decides the fields below.
@@ -353,20 +340,6 @@ class _AssignChoreSheetState extends ConsumerState<AssignChoreSheet> {
               enabled: !_busy,
               onChanged: (key) => setState(() => _ringtone = key),
             ),
-            if (daily) ...[
-              const SizedBox(height: 8),
-              _CameraChoice(
-                childId: cameraChild,
-                childName: cameraChild == null ? null : _nameOf(cameraChild),
-                camera: _camera,
-                cameraId: _cameraId,
-                enabled: !_busy,
-                onChanged: (camera, id) => setState(() {
-                  _camera = camera;
-                  _cameraId = id;
-                }),
-              ),
-            ],
             const SizedBox(height: 16),
             Text('Points', style: text.titleSmall),
             const SizedBox(height: 4),
@@ -478,113 +451,6 @@ class _Weekdays extends StatelessWidget {
               TextButton(onPressed: enabled ? () => onChanged({...pick}) : null, child: Text(label)),
           ],
         ),
-      ],
-    );
-  }
-}
-
-/// The camera for a daily quest (PS-6): the phone, or a third-party camera
-/// connected to the child's phone. The parent never picks front or back;
-/// the child flips between them. Third-party is greyed out, and cannot be
-/// tapped, unless that child's phone has reported one as connected.
-class _CameraChoice extends ConsumerWidget {
-  const _CameraChoice({
-    required this.childId,
-    required this.childName,
-    required this.camera,
-    required this.cameraId,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final int? childId;
-  final String? childName;
-  final CameraSource camera;
-  final String? cameraId;
-  final bool enabled;
-  final void Function(CameraSource camera, String? cameraId) onChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final id = childId;
-    final cameras = id == null ? null : ref.watch(childCamerasProvider(id));
-    final connected = cameras?.value ?? const <ReportedCamera>[];
-    // A camera already on the quest stays choosable while it is away, so
-    // editing never forces it off; the quest uses the phone until it is back.
-    final away = camera == CameraSource.external && cameraId != null && !connected.any((c) => c.key == cameraId);
-    final available = connected.isNotEmpty || away;
-    final who = childName;
-
-    final String thirdPartyNote;
-    if (who == null) {
-      thirdPartyNote = 'Choose one child to use a third-party camera.';
-    } else if (cameras != null && cameras.isLoading && !cameras.hasValue) {
-      thirdPartyNote = "Checking $who's phone…";
-    } else if (cameras != null && cameras.hasError && !cameras.hasValue) {
-      thirdPartyNote = "Couldn't check $who's phone for cameras.";
-    } else if (!available) {
-      thirdPartyNote = "No third-party camera is connected to $who's phone right now.";
-    } else if (away) {
-      thirdPartyNote = 'The chosen camera is not connected right now. Until it is, $who will use the phone.';
-    } else {
-      thirdPartyNote = connected.length == 1 ? connected.single.label : 'Choose which one below.';
-    }
-
-    void choose(CameraSource? source) {
-      if (source == null || !enabled) return;
-      if (source == CameraSource.phone) {
-        onChanged(CameraSource.phone, null);
-      } else {
-        onChanged(CameraSource.external, cameraId ?? (connected.isEmpty ? null : connected.first.key));
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Camera', style: text.titleSmall),
-        RadioGroup<CameraSource>(
-          groupValue: camera,
-          onChanged: choose,
-          child: Column(
-            children: [
-              RadioListTile<CameraSource>(
-                contentPadding: EdgeInsets.zero,
-                value: CameraSource.phone,
-                enabled: enabled,
-                title: const Text('Phone camera'),
-                subtitle: Text(
-                  who == null
-                      ? 'Each child can switch between the front and back camera when they start.'
-                      : '$who can switch between the front and back camera when they start.',
-                ),
-              ),
-              RadioListTile<CameraSource>(
-                contentPadding: EdgeInsets.zero,
-                value: CameraSource.external,
-                enabled: enabled && available,
-                title: const Text('Third-party camera'),
-                subtitle: Text(thirdPartyNote, style: available ? null : TextStyle(color: scheme.onSurfaceVariant)),
-              ),
-            ],
-          ),
-        ),
-        if (camera == CameraSource.external && connected.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(left: 16, top: 4),
-            child: DropdownButtonFormField<String>(
-              initialValue: connected.any((c) => c.key == cameraId) ? cameraId : null,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Which camera'),
-              items: [
-                for (final c in connected)
-                  DropdownMenuItem(value: c.key, child: Text(c.label, overflow: TextOverflow.ellipsis)),
-              ],
-              onChanged: enabled ? (key) => onChanged(CameraSource.external, key) : null,
-            ),
-          ),
       ],
     );
   }

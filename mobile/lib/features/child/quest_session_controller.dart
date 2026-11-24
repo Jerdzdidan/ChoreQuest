@@ -52,7 +52,7 @@ class QuestSessionController extends ChangeNotifier {
     required this.onStopAlarm,
     this.prep,
     this.phoneModel,
-    this.cameraFallback = false,
+    this.strapped = true,
     DateTime Function()? now,
     this.steadyTimeout = const Duration(seconds: 6),
     this.frameInterval = const Duration(milliseconds: 250),
@@ -81,9 +81,10 @@ class QuestSessionController extends ChangeNotifier {
   final FramePrepWorker? prep;
   final String? phoneModel;
 
-  /// The scheduled third-party camera was missing, so the phone is used
-  /// (DV-12).
-  final bool cameraFallback;
+  /// The child said the phone is strapped on (CAM-3). Without a strap the
+  /// model may not see the chore, so a quest it checks goes manual and the
+  /// grown-up judges from the Before and After photos.
+  final bool strapped;
 
   /// The longest to wait for a steady picture before taking Before anyway.
   final Duration steadyTimeout;
@@ -142,8 +143,11 @@ class QuestSessionController extends ChangeNotifier {
     _clock.start();
     session.start();
     if (session.mode == CheckMode.motion && !detector.available) session.goManual();
+    if (session.mode == CheckMode.motion && !strapped) session.goManual(ManualReason.noStrap);
     _changed();
     if (!await _open()) return;
+    // Only the back camera, on a strap, sees the child's hands.
+    if (session.mode == CheckMode.motion && !camera.isBack) session.goManual(ManualReason.noBackCamera);
     await _captureBefore();
   }
 
@@ -223,21 +227,6 @@ class QuestSessionController extends ChangeNotifier {
     }));
   }
 
-  /// The child flipped between front and back: the camera turns, the work
-  /// so far and the Before photo stay.
-  Future<void> flip() async {
-    if (!camera.canFlip || busy) return;
-    busy = true;
-    _changed();
-    try {
-      await camera.flip();
-      session.flipped();
-    } finally {
-      busy = false;
-      _changed();
-    }
-  }
-
   /// The child tapped Done: the frames stop and the After photo is taken.
   Future<void> done() async {
     if (!session.showsDone || busy) return;
@@ -288,7 +277,6 @@ class QuestSessionController extends ChangeNotifier {
       choreKey: assignment.chore.key,
       modelVersion: detector.version,
       camera: camera.label,
-      cameraFallback: cameraFallback,
       sceneChangeScore: await _sceneChange(),
       meanModelMs: detector.meanModelMs,
       phoneModel: phoneModel,

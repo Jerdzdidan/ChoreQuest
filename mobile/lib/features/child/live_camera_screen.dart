@@ -13,6 +13,7 @@ import '../../core/quest_session/frame_prep.dart';
 import '../../core/quest_session/model_config.dart';
 import '../../core/quest_session/quest_session.dart';
 import '../../shared/chore_icons.dart';
+import '../../shared/strap.dart';
 import 'child_providers.dart';
 import 'quest_session_controller.dart';
 import 'quest_session_providers.dart';
@@ -25,8 +26,9 @@ import 'submission_result_screen.dart';
 /// Opening this screen is tapping Start the quest. The screen stays awake,
 /// upright and silent (no microphone is ever asked for), lets go of the
 /// camera when the app goes to the background and takes it back on return.
-/// The phone's own camera has a button to flip between front and back; a
-/// third-party camera has none.
+/// The phone's back camera watches, worn on a head or chest strap so it sees
+/// the child's hands (CAM-3); before a quest the model checks, the child is
+/// asked to strap the phone on.
 ///
 /// The words stay encouraging throughout: the child never sees a score or a
 /// failure message.
@@ -43,16 +45,33 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
   QuestSessionController? _controller;
   bool _leaving = false;
 
+  /// A quest the model checks asks first whether the phone is strapped on;
+  /// null until the child answers (CAM-3).
+  bool? _strapped;
+
+  bool get _modelChecks {
+    final chore = widget.assignment.chore;
+    return chore.verificationMode == VerificationMode.motion && chore.modelClass != null;
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     unawaited(WakelockPlus.enable().catchError((_) {}));
-    unawaited(_start());
+    if (!_modelChecks) unawaited(_start());
   }
 
-  Future<void> _start() async {
+  /// The child answered the strap question. The alarm keeps ringing while
+  /// they strap the phone on.
+  void _answer(bool strapped) {
+    if (_strapped != null) return;
+    setState(() => _strapped = strapped);
+    unawaited(_start(strapped: strapped));
+  }
+
+  Future<void> _start({bool strapped = true}) async {
     ModelConfig config;
     try {
       config = await ref.read(modelConfigProvider.future);
@@ -74,9 +93,6 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
       prep = FramePrepWorker(size: ((config.json['model'] as Map?)?['input_size'] as num? ?? 192).toInt());
       await prep.start();
     }
-    // The scheduled third-party camera, or the phone's when it is missing
-    // (DV-12): the child can always start.
-    final choice = await ref.read(cameraChooserProvider).choose(widget.assignment);
     if (!mounted) {
       prep?.stop();
       return;
@@ -84,13 +100,13 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
     final stopAlarm = ref.read(alarmStopperProvider);
     final controller = QuestSessionController(
       assignment: widget.assignment,
-      camera: choice.camera,
+      camera: ref.read(sessionCameraProvider)(widget.assignment),
       detector: detector,
       thresholds: config.thresholdsFor(chore.key, catalogueMinSeconds: chore.minActiveSeconds),
       sendPackage: ref.read(sessionSenderProvider),
       onStopAlarm: () => stopAlarm(widget.assignment),
       prep: prep,
-      cameraFallback: choice.fellBack,
+      strapped: strapped,
     )..addListener(_onChange);
     setState(() => _controller = controller);
     await controller.begin();
@@ -189,7 +205,9 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
             children: [
               Positioned.fill(
                 child: controller == null
-                    ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                    ? (_modelChecks && _strapped == null
+                        ? _StrapStep(onAnswer: _answer)
+                        : const Center(child: CircularProgressIndicator(color: Colors.white)))
                     : reviewing
                         ? _Review(controller: controller)
                         : controller.problem != null
@@ -229,22 +247,13 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
                         ),
                       ],
                     ),
-                    if (controller != null && controller.cameraFallback && !reviewing) ...[
-                      const SizedBox(height: 8),
-                      const _CameraNote(),
-                    ],
                   ],
                 ),
               ),
               if (controller != null && !reviewing && controller.problem == null)
                 Positioned(left: 0, right: 0, bottom: 0, child: _SessionBar(controller: controller)),
               if (kDebugMode && controller != null && controller.detector is FakeDetector && !reviewing)
-                // Below the camera note when it shows.
-                Positioned(
-                  top: controller.cameraFallback ? 200 : 64,
-                  right: 8,
-                  child: _FakePanel(detector: controller.detector as FakeDetector),
-                ),
+                Positioned(top: 64, right: 8, child: _FakePanel(detector: controller.detector as FakeDetector)),
             ],
           ),
         ),
@@ -253,29 +262,55 @@ class _QuestSessionScreenState extends ConsumerState<QuestSessionScreen> with Wi
   }
 }
 
-/// The scheduled camera was not there, said kindly (DV-12).
-class _CameraNote extends StatelessWidget {
-  const _CameraNote();
+/// Before a quest the model checks (CAM-3): the phone goes on a head or
+/// chest strap, so the back camera sees the child's hands. Without one the
+/// quest still goes ahead, and the grown-up judges from the photos.
+class _StrapStep extends StatelessWidget {
+  const _StrapStep({required this.onAnswer});
+
+  final void Function(bool strapped) onAnswer;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.videocam_off_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                "The quest camera isn't connected, so let's use this phone's camera!",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    // A card on the camera's dark backdrop, below the quest's name, which is
+    // drawn in white for the camera.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 72, 16, 16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  'Strap on your phone so it can see your hands',
+                  textAlign: TextAlign.center,
+                  style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              const StrapPictures(size: 110),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => onAnswer(true),
+                style: FilledButton.styleFrom(minimumSize: const Size(64, 64)),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('My phone is strapped on'),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'No strap? You can still do your quest. Your grown-up will check your Before and After photos.',
+                textAlign: TextAlign.center,
+                style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              TextButton(onPressed: () => onAnswer(false), child: const Text('Start without a strap')),
+            ],
+          ),
         ),
       ),
     );
@@ -330,17 +365,7 @@ class _SessionBar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 64,
-                  child: controller.camera.canFlip
-                      ? IconButton.filledTonal(
-                          tooltip: 'Switch camera',
-                          onPressed: controller.busy ? null : controller.flip,
-                          iconSize: 28,
-                          icon: const Icon(Icons.cameraswitch_rounded),
-                        )
-                      : null,
-                ),
+                const SizedBox(width: 64),
                 const SizedBox(width: 16),
                 SizedBox.square(
                   dimension: 96,

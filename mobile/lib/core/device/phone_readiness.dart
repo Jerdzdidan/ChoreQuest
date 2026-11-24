@@ -34,6 +34,14 @@ enum ReadinessRow {
     'Camera',
     'Quests cannot start: the camera takes the Before and After photos.',
     'Allow the camera',
+  ),
+
+  /// Not read from Android: a grown-up says a strap is ready (CAM-3).
+  strap(
+    'strap',
+    'Strap on your phone',
+    'Quests the model checks need the phone on a head or chest strap, or the model may not see the chore.',
+    'A strap is ready',
   );
 
   const ReadinessRow(this.key, this.title, this.whenOff, this.fixLabel);
@@ -144,6 +152,27 @@ class ReadinessStore {
   }
 }
 
+/// Whether a grown-up has said a phone strap is ready (CAM-3), kept in the
+/// app's own files. Unticked until they do.
+class StrapStore {
+  StrapStore(this.file);
+
+  final File file;
+
+  Future<bool> isReady() async {
+    try {
+      return (await file.readAsString()).trim() == 'ready';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> setReady(bool ready) async {
+    await file.parent.create(recursive: true);
+    await file.writeAsString(ready ? 'ready' : '', flush: true);
+  }
+}
+
 /// Checks the phone, keeps the result and tells the server (DV-10), with
 /// when the schedule was last copied, so the parent's Board can say Ready or
 /// Needs setup.
@@ -153,10 +182,14 @@ class PhoneReadinessService {
     required this.store,
     required this.report,
     required this.lastSync,
+    this.strap,
   });
 
   final ReadinessProbe probe;
   final ReadinessStore store;
+
+  /// Whether a strap is ready, which Android cannot say; unticked without it.
+  final StrapStore? strap;
 
   /// POST /my/device-status.
   final Future<void> Function(Map<String, bool> checks, DateTime? lastSyncAt) report;
@@ -168,8 +201,13 @@ class PhoneReadinessService {
   /// where the phone cannot say. A report that cannot be sent is tried again
   /// at the next check.
   Future<({ReadinessResult result, bool firstRun})?> refresh() async {
-    final result = await probe.check();
-    if (result == null) return null;
+    final read = await probe.check();
+    if (read == null) return null;
+    final result = ReadinessResult(
+      rows: {...read.rows, ReadinessRow.strap: await strap?.isReady() ?? false},
+      checkedAt: read.checkedAt,
+      makerBattery: read.makerBattery,
+    );
     final firstRun = await store.load() == null;
     try {
       await store.save(result);

@@ -55,8 +55,8 @@ String whenText(DateTime at, DateTime now, MaterialLocalizations localizations) 
 }
 
 /// One line for a quest's schedule in the parent's lists (PS-9), such as
-/// "Mon Wed Fri · 4:30 PM · Phone camera" or "Sat 21 Nov · 9:00 AM". A
-/// one-time quest names no camera, since it always uses the phone.
+/// "Mon Wed Fri · 4:30 PM" or "Sat 21 Nov · 9:00 AM". No camera is named:
+/// every quest uses the phone's back camera (CAM-3).
 String scheduleLine(QuestSchedule schedule, MaterialLocalizations localizations) {
   final date = schedule.scheduledDate;
   final alarm = schedule.alarmTime;
@@ -66,6 +66,5 @@ String scheduleLine(QuestSchedule schedule, MaterialLocalizations localizations)
     else
       date == null ? 'One day' : shortDate(date),
     if (alarm != null) alarmText(alarm, localizations),
-    if (schedule.recurrence == Recurrence.daily) schedule.cameraSource.label,
   ].join(' · ');
 }

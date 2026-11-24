@@ -49,15 +49,24 @@ class SessionEvidence {
   double? get sceneChange => _double('scene_change');
   bool? get sceneFits => _json['scene_fits'] as bool?;
 
-  /// phone_front, phone_back, external or network.
+  /// phone_back, or phone_front on a phone with no back camera; external or
+  /// network on sessions from before Phase 5.
   String? get camera => _json['camera'] as String?;
+
+  /// Before Phase 5: the child flipped the camera.
   bool get cameraFlipped => _flag('camera_flipped');
 
-  /// The scheduled third-party camera was missing, so the phone was used.
+  /// Before Phase 5: the scheduled third-party camera was missing.
   bool get cameraFallback => _flag('camera_fallback');
 
   /// The movement model could not run, so the session went manual.
   bool get modelUnavailable => _flag('model_unavailable');
+
+  /// The child started without the phone on a strap (CAM-3).
+  bool get noStrap => _flag('no_strap');
+
+  /// The phone has no back camera.
+  bool get noBackCamera => _flag('no_back_camera');
 }
 
 /// What the confidence thresholds decided when the photo arrived.

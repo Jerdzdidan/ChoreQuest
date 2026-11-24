@@ -2,17 +2,17 @@ import 'package:flutter/widgets.dart';
 
 import '../quest_session/frame_prep.dart';
 
-/// A camera a quest session watches through (LS-2): the phone's own, which
-/// the child flips between front and back, or a third-party one (DV-8,
-/// DV-11), which does not flip. The session never asks which it is beyond
-/// these few calls, so the same detector takes frames from any of them.
+/// The camera a quest session watches through (LS-2): the phone's back
+/// camera, worn on a head or chest strap so it sees the child's hands
+/// (CAM-3). It does not flip: the first-person view is the back camera.
 abstract class SessionCamera {
-  /// What the evidence calls it: phone_back, phone_front, external or
-  /// network.
+  /// What the evidence calls it: phone_back, or phone_front on a phone
+  /// with no back camera.
   String get label;
 
-  /// Only the phone's own camera flips; a third-party one shows no button.
-  bool get canFlip;
+  /// Whether this is the back camera. False only on a phone that has none,
+  /// where the quest falls back to the Before and After photos.
+  bool get isBack;
 
   bool get isOpen;
 
@@ -20,10 +20,6 @@ abstract class SessionCamera {
 
   /// The live picture.
   Widget preview();
-
-  /// Front to back or back to front, keeping the frame stream going if it
-  /// was.
-  Future<void> flip();
 
   /// Every frame from now until [stopFrames], as fast as the camera gives
   /// them; the caller decides which to keep.

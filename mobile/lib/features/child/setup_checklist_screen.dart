@@ -5,10 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/device/phone_readiness.dart';
-import '../../core/models/camera.dart';
+import '../../shared/strap.dart';
 import '../../shared/theme.dart';
 import 'model_benchmark_screen.dart';
-import 'network_cameras_screen.dart';
 import 'quest_session_providers.dart';
 
 /// "Ready for alarms" (DV-1), on the child's phone, for the grown-up setting
@@ -18,9 +17,8 @@ import 'quest_session_providers.dart';
 /// every return from Settings, and each check is reported to the server
 /// (DV-10).
 ///
-/// Below the rows, the cameras this phone can see right now (DV-8), which
-/// change as a USB camera is plugged in or out, and a plain sentence when
-/// the phone cannot use USB cameras at all.
+/// The last row is the strap (CAM-3): a picture of each kind and the
+/// neck-cord warning, unticked until a grown-up says one is ready.
 class SetupChecklistScreen extends ConsumerStatefulWidget {
   const SetupChecklistScreen({super.key, this.initial});
 
@@ -37,9 +35,6 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
   ReadinessRow? _fixing;
   var _openingMaker = false;
   String? _note;
-  List<ReportedCamera>? _cameras;
-  bool? _usbSupported;
-  StreamSubscription<List<ReportedCamera>>? _cameraUpdates;
 
   @override
   void initState() {
@@ -47,39 +42,18 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
     _result = widget.initial;
     WidgetsBinding.instance.addObserver(this);
     unawaited(_refresh());
-    final reporter = ref.read(cameraReporterProvider);
-    _cameras = reporter.latest;
-    _cameraUpdates = reporter.updates.listen((cameras) {
-      if (mounted) setState(() => _cameras = cameras);
-    });
-    unawaited(reporter.refresh());
-    unawaited(_askUsb());
-  }
-
-  Future<void> _openNetworkCameras() async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NetworkCamerasScreen()));
-    if (mounted) unawaited(ref.read(cameraReporterProvider).refresh());
-  }
-
-  Future<void> _askUsb() async {
-    final supported = await ref.read(externalCameraSourceProvider).supported();
-    if (mounted) setState(() => _usbSupported = supported);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_cameraUpdates?.cancel());
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Back from a settings screen: see what changed.
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_refresh());
-      unawaited(ref.read(cameraReporterProvider).refresh());
-    }
+    if (state == AppLifecycleState.resumed) unawaited(_refresh());
   }
 
   Future<void> _refresh() async {
@@ -92,6 +66,7 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
   }
 
   Future<void> _fix(ReadinessRow row) async {
+    if (row == ReadinessRow.strap) return _confirmStrap();
     setState(() {
       _fixing = row;
       _note = null;
@@ -106,6 +81,27 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
         FixOutcome.granted || FixOutcome.opened => null,
       };
     });
+    await _refresh();
+  }
+
+  /// A grown-up says a strap is ready; nothing on the phone can tell.
+  Future<void> _confirmStrap() async {
+    final ready = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: const Text('Is a phone strap ready?'),
+        content: const Text(
+          'A head or chest strap made for phones, so the camera sees your child\'s hands. $neckCordWarning',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Not yet')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, a strap is ready')),
+        ],
+      ),
+    );
+    if (ready != true || !mounted) return;
+    await ref.read(strapStoreProvider).setReady(true);
     await _refresh();
   }
 
@@ -155,21 +151,29 @@ class _SetupChecklistScreenState extends ConsumerState<SetupChecklistScreen> wit
               _Summary(result: result),
               const SizedBox(height: 12),
               for (final row in ReadinessRow.values) ...[
-                _RowCard(row: row, on: result.isOn(row), fixing: _fixing == row, onFix: _fixing == null ? () => _fix(row) : null),
+                _RowCard(
+                  row: row,
+                  on: result.isOn(row),
+                  fixing: _fixing == row,
+                  onFix: _fixing == null ? () => _fix(row) : null,
+                  // The strap step shows each kind, and the neck-cord warning.
+                  extra: row == ReadinessRow.strap
+                      ? const Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(height: 12),
+                            StrapPictures(size: 84),
+                            SizedBox(height: 8),
+                            Text(neckCordWarning),
+                          ],
+                        )
+                      : null,
+                ),
                 const SizedBox(height: 8),
               ],
               if (result.makerBattery) _MakerCard(opening: _openingMaker, onOpen: _openingMaker ? null : _openMaker),
             ],
-            const SizedBox(height: 20),
-            Text('Cameras', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            _CamerasCard(cameras: _cameras, usbSupported: _usbSupported),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _openNetworkCameras,
-              icon: const Icon(Icons.videocam_rounded),
-              label: const Text('Network cameras (CCTV)'),
-            ),
+            const SizedBox(height: 12),
             // M11: not in a release build.
             if (kDebugMode)
               TextButton(
@@ -231,12 +235,15 @@ class _Summary extends StatelessWidget {
 }
 
 class _RowCard extends StatelessWidget {
-  const _RowCard({required this.row, required this.on, required this.fixing, required this.onFix});
+  const _RowCard({required this.row, required this.on, required this.fixing, required this.onFix, this.extra});
 
   final ReadinessRow row;
   final bool on;
   final bool fixing;
   final VoidCallback? onFix;
+
+  /// More under the row, whatever its state.
+  final Widget? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +283,7 @@ class _RowCard extends StatelessWidget {
                 ],
               ),
             ),
+            ?extra,
             if (!on) ...[
               const SizedBox(height: 10),
               Padding(
@@ -289,70 +297,6 @@ class _RowCard extends StatelessWidget {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// What cameras this phone can see right now (DV-8).
-class _CamerasCard extends StatelessWidget {
-  const _CamerasCard({required this.cameras, required this.usbSupported});
-
-  final List<ReportedCamera>? cameras;
-  final bool? usbSupported;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final found = cameras;
-    final usb = found?.where((c) => c.kind == CameraKind.external).toList() ?? const <ReportedCamera>[];
-    final usbNote = switch (usbSupported) {
-      false => 'This phone does not support USB cameras.',
-      true when found != null && usb.isEmpty => 'No USB camera is plugged in. Plug one in and it shows here.',
-      _ => null,
-    };
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Semantics(
-          liveRegion: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (found == null)
-                Text('Looking for cameras…', style: text.bodyMedium)
-              else if (found.isEmpty)
-                Text('No camera found.', style: text.bodyMedium)
-              else
-                for (final camera in found)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(switch (camera.kind) {
-                          CameraKind.phone => Icons.photo_camera_rounded,
-                          CameraKind.external => Icons.usb_rounded,
-                          CameraKind.network => Icons.videocam_rounded,
-                        }),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            camera.connected ? camera.label : '${camera.label}: not answering',
-                            style: text.bodyLarge,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              if (usbNote != null) ...[
-                const SizedBox(height: 8),
-                Text(usbNote, style: text.bodyMedium),
-              ],
-            ],
-          ),
         ),
       ),
     );

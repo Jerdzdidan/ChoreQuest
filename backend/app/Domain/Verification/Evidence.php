@@ -32,9 +32,13 @@ final class Evidence
         'scene_change' => 'float',
         'scene_fits' => 'bool',
         'camera' => 'string',
+        // Only from apps before CAM-3, which could flip to the front camera
+        // or fall back from a third-party one.
         'camera_flipped' => 'bool',
         'camera_fallback' => 'bool',
         'model_unavailable' => 'bool',
+        'no_strap' => 'bool',
+        'no_back_camera' => 'bool',
         'mean_model_ms' => 'int',
         'phone_model' => 'string',
         'started_at' => 'string',

@@ -252,9 +252,14 @@ class _ManualBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final tint = QuestColors.of(context).saved;
     final text = Theme.of(context).textTheme;
-    final why = (submission.evidence?.modelUnavailable ?? false)
-        ? "The movement check couldn't run on the phone this time."
-        : 'This chore is checked by you, not by movement.';
+    final evidence = submission.evidence;
+    final why = evidence?.noStrap ?? false
+        ? 'Started without the phone on a strap, so the movement check could not see the chore.'
+        : evidence?.noBackCamera ?? false
+            ? "This phone has no back camera, so the movement check couldn't watch."
+            : evidence?.modelUnavailable ?? false
+                ? "The movement check couldn't run on the phone this time."
+                : 'This chore is checked by you, not by movement.';
 
     return Container(
       padding: const EdgeInsets.all(12),

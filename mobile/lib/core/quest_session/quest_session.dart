@@ -42,6 +42,23 @@ enum SessionState {
 /// alone (a custom chore, or no model on the phone).
 enum CheckMode { motion, manual }
 
+/// Why a quest the model checks went manual.
+enum ManualReason {
+  /// No model on the phone, or it failed.
+  modelUnavailable('model_unavailable'),
+
+  /// The child started without the phone on a strap (CAM-3).
+  noStrap('no_strap'),
+
+  /// The phone has no back camera, so nothing can see the child's hands.
+  noBackCamera('no_back_camera');
+
+  const ManualReason(this.key);
+
+  /// As the alarm-stop reason and the evidence call it.
+  final String key;
+}
+
 /// Something the session tells whoever runs it.
 sealed class SessionEvent {
   const SessionEvent();
@@ -60,7 +77,8 @@ class StateChanged extends SessionEvent {
 class StopAlarm extends SessionEvent {
   const StopAlarm(this.reason);
 
-  /// movement, before_photo or model_unavailable.
+  /// movement, before_photo, or why the session went manual
+  /// (ManualReason.key).
   final String reason;
 }
 
@@ -112,12 +130,14 @@ class QuestSession {
 
   DateTime? startedAt;
   DateTime? finishedAt;
-  var cameraFlipped = false;
   var alarmStopped = false;
 
-  /// The movement model could not run, so the session went manual.
-  var modelUnavailable = false;
+  /// Why a session the model would have checked went manual, if it did.
+  ManualReason? manualReason;
   String? failure;
+
+  /// The movement model could not run, so the session went manual.
+  bool get modelUnavailable => manualReason == ManualReason.modelUnavailable;
 
   /// Whether the Done button belongs on the screen.
   bool get showsDone => _state == SessionState.doneAvailable;
@@ -153,7 +173,7 @@ class QuestSession {
   void beforeCaptured() {
     if (mode == CheckMode.manual) {
       _go(SessionState.doneAvailable);
-      _stopAlarm(modelUnavailable ? 'model_unavailable' : 'before_photo');
+      _stopAlarm(manualReason?.key ?? 'before_photo');
     } else {
       _go(SessionState.waitingForMovement);
     }
@@ -181,21 +201,19 @@ class QuestSession {
     }
   }
 
-  /// No model on the phone, or it failed: the session goes on as a manual
-  /// one rather than leaving the child unable to finish (LS-5).
-  void goManual() {
+  /// The model cannot watch this time: no model on the phone or it failed
+  /// (LS-5), no strap (CAM-3), or no back camera. The session goes on as a
+  /// manual one rather than leaving the child unable to finish, and the
+  /// grown-up judges from the Before and After photos.
+  void goManual([ManualReason reason = ManualReason.modelUnavailable]) {
     if (mode == CheckMode.manual) return;
     mode = CheckMode.manual;
-    modelUnavailable = true;
+    manualReason = reason;
     if (_state == SessionState.waitingForMovement || _state == SessionState.active) {
       _go(SessionState.doneAvailable);
-      _stopAlarm('model_unavailable');
+      _stopAlarm(reason.key);
     }
   }
-
-  /// The child flipped between front and back. The work done so far and the
-  /// Before photo are kept.
-  void flipped() => cameraFlipped = true;
 
   /// The child tapped Done, which only exists in doneAvailable.
   void done() {

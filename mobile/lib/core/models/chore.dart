@@ -193,26 +193,8 @@ enum Recurrence {
   static Recurrence parse(String? raw) => raw == 'once' ? once : daily;
 }
 
-/// Which camera watches a quest (PS-6). The parent picks between these two
-/// only; with the phone, the child flips between front and back.
-enum CameraSource {
-  /// The child's own phone.
-  phone,
-
-  /// A third-party camera the child's phone reported as connected.
-  external;
-
-  /// Anything this version does not know reads as the phone, which every
-  /// child has.
-  static CameraSource parse(String? raw) => raw == 'external' ? external : phone;
-
-  String get label => switch (this) {
-        phone => 'Phone camera',
-        external => 'Third-party camera',
-      };
-}
-
-/// When a quest rings on the child's phone, and how it is watched (PS-7).
+/// When a quest rings on the child's phone (PS-7). Every quest is watched
+/// through the phone's back camera, on a strap (CAM-3).
 class QuestSchedule {
   const QuestSchedule({
     this.recurrence = Recurrence.daily,
@@ -220,8 +202,6 @@ class QuestSchedule {
     this.daysOfWeek,
     this.alarmTime,
     this.ringtoneKey = defaultRingtone,
-    this.cameraSource = CameraSource.phone,
-    this.cameraDeviceId,
     this.alarmEnabled = true,
   });
 
@@ -240,24 +220,19 @@ class QuestSchedule {
   /// When the alarm rings: the old "Finish by" time.
   final ClockTime? alarmTime;
   final String ringtoneKey;
-  final CameraSource cameraSource;
-  final String? cameraDeviceId;
   final bool alarmEnabled;
 
   /// Whether a daily quest repeats on [weekday] (1 Monday to 7 Sunday).
   bool repeatsOn(int weekday) => daysOfWeek == null || daysOfWeek!.contains(weekday);
 
-  /// The fields as the API takes them. A one-time quest always uses the
-  /// phone camera; the server holds to that too.
+  /// The fields as the API takes them. The camera is not among them: the
+  /// server sets the phone's on every quest (CAM-1).
   Map<String, Object?> get wire => {
         'recurrence': recurrence.name,
         'due_time': alarmTime?.wire,
         'scheduled_date': recurrence == Recurrence.once && scheduledDate != null ? isoDate(scheduledDate!) : null,
         'days_of_week': recurrence == Recurrence.daily ? daysOfWeek : null,
         'ringtone_key': ringtoneKey,
-        'camera_source': recurrence == Recurrence.once ? CameraSource.phone.name : cameraSource.name,
-        'camera_device_id':
-            recurrence == Recurrence.daily && cameraSource == CameraSource.external ? cameraDeviceId : null,
         'alarm_enabled': alarmEnabled,
       };
 }
@@ -276,8 +251,6 @@ class Assignment {
     this.location = QuestLocation.other,
     this.daysOfWeek,
     this.ringtoneKey = QuestSchedule.defaultRingtone,
-    this.cameraSource = CameraSource.phone,
-    this.cameraDeviceId,
     this.alarmEnabled = true,
   });
 
@@ -296,8 +269,6 @@ class Assignment {
       location: QuestLocation.parse(json['location'] as String?),
       daysOfWeek: days == null ? null : [for (final day in days) day as int],
       ringtoneKey: json['ringtone_key'] as String? ?? QuestSchedule.defaultRingtone,
-      cameraSource: CameraSource.parse(json['camera_source'] as String?),
-      cameraDeviceId: json['camera_device_id'] as String?,
       alarmEnabled: json['alarm_enabled'] as bool? ?? true,
     );
   }
@@ -317,8 +288,6 @@ class Assignment {
   /// The weekdays a daily quest repeats on; null is every day.
   final List<int>? daysOfWeek;
   final String ringtoneKey;
-  final CameraSource cameraSource;
-  final String? cameraDeviceId;
   final bool alarmEnabled;
 
   /// The schedule as one value, for editing it (PS-7).
@@ -328,8 +297,6 @@ class Assignment {
         daysOfWeek: daysOfWeek,
         alarmTime: dueTime,
         ringtoneKey: ringtoneKey,
-        cameraSource: cameraSource,
-        cameraDeviceId: cameraDeviceId,
         alarmEnabled: alarmEnabled,
       );
 }

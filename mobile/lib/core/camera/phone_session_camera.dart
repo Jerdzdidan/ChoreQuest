@@ -4,34 +4,31 @@ import 'package:flutter/widgets.dart';
 import '../quest_session/frame_prep.dart';
 import 'session_camera.dart';
 
-/// The phone's own camera for a quest session: back to begin with, flipped
-/// to the front by the child. No audio is asked for, ever: the microphone
+/// The phone's back camera for a quest session (CAM-3), on a strap. A phone
+/// with no back camera opens whichever it has, and the session falls back to
+/// the Before and After photos. No audio is asked for, ever: the microphone
 /// permission stays out of the app.
 class PhoneSessionCamera implements SessionCamera {
-  PhoneSessionCamera({this.front = false});
-
-  /// Which way it faces now.
-  bool front;
-
   CameraController? _controller;
-  void Function(YuvFrame frame)? _onFrame;
+  var _isBack = true;
 
   @override
-  String get label => front ? 'phone_front' : 'phone_back';
+  String get label => _isBack ? 'phone_back' : 'phone_front';
 
   @override
-  bool get canFlip => true;
+  bool get isBack => _isBack;
 
   @override
   bool get isOpen => _controller?.value.isInitialized ?? false;
 
-  /// The camera to open: the one facing [front]'s way.
+  /// The camera to open: the back one, or the first there is.
   @protected
   Future<CameraDescription> lens() async {
     final cameras = await availableCameras().timeout(const Duration(seconds: 10));
     if (cameras.isEmpty) throw CameraException('NoCamera', 'This phone has no camera.');
-    final wanted = front ? CameraLensDirection.front : CameraLensDirection.back;
-    return cameras.firstWhere((c) => c.lensDirection == wanted, orElse: () => cameras.first);
+    final back = cameras.where((c) => c.lensDirection == CameraLensDirection.back);
+    _isBack = back.isNotEmpty;
+    return back.isNotEmpty ? back.first : cameras.first;
   }
 
   @override
@@ -56,21 +53,9 @@ class PhoneSessionCamera implements SessionCamera {
   }
 
   @override
-  Future<void> flip() async {
-    final controller = _controller;
-    if (controller == null) return;
-    final streaming = _onFrame;
-    if (controller.value.isStreamingImages) await controller.stopImageStream();
-    front = !front;
-    await controller.setDescription(await lens());
-    if (streaming != null) await startFrames(streaming);
-  }
-
-  @override
   Future<void> startFrames(void Function(YuvFrame frame) onFrame) async {
     final controller = _controller;
     if (controller == null || controller.value.isStreamingImages) return;
-    _onFrame = onFrame;
     final rotation = controller.description.sensorOrientation;
     await controller.startImageStream((image) {
       if (image.planes.length < 3) return;
@@ -91,7 +76,6 @@ class PhoneSessionCamera implements SessionCamera {
 
   @override
   Future<void> stopFrames() async {
-    _onFrame = null;
     final controller = _controller;
     if (controller != null && controller.value.isStreamingImages) await controller.stopImageStream();
   }
@@ -107,7 +91,6 @@ class PhoneSessionCamera implements SessionCamera {
   Future<void> close() async {
     final controller = _controller;
     _controller = null;
-    _onFrame = null;
     await controller?.dispose();
   }
 }

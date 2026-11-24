@@ -46,17 +46,30 @@ convenience, especially late in the project when a shortcut looks cheap.
    decision, never overwritten.** Chapter 4 computes its rates from that pair.
 
 6. **Child authentication is PIN-through-household, never email.** A child picks
-   an avatar within their parent's household and enters a 4-digit PIN. Tokens
-   carry an ability, `parent` or `child`, and child tokens are refused on every
-   parent route.
+   an avatar within their parent's household and enters a 4-digit PIN. A parent
+   may also use a 4-digit PIN, but only on a phone where they signed in with
+   email and password at least once; five wrong PINs turn the PIN off until the
+   next email-and-password sign-in, and a PIN never resets a password. Tokens
+   carry an ability, `parent` or `child`, however they were issued, and child
+   tokens are refused on every parent route.
 
 7. **Chore photos are never publicly reachable.** They are images of minors
    inside their homes. Store outside the public root; serve only through an
    authenticated, authorised route. Before and After photos are private, served
    only through the authenticated parent route.
 
-8. **Camera video never leaves the phone and is never saved.** Frames exist in
-   memory only; the server receives two stills and a small evidence summary.
+8. **Video from the phone's back camera never leaves the phone and is never
+   saved.** Frames exist in memory only; the server receives two stills and a
+   small evidence summary.
+
+9. **Screen time is only spent by the server.** A locked app stays open only
+   for minutes the server has written as `-minutes` ledger rows. The phone
+   counts down what it was given and never more. When it cannot reach the
+   server, locked apps stay locked.
+
+10. **App Lock never stops silently.** When a phone loses a permission App Lock
+    needs, or its watcher stops, the parent is told. Every grown-up unlock of a
+    locked or blocked app is recorded with who, which app and when.
 
 ## Scope — what NOT to do
 

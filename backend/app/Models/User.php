@@ -39,6 +39,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'pin_hash',
     ];
 
     protected function casts(): array
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'notifications_seen_at' => 'datetime',
+            'pin_locked_at' => 'datetime',
         ];
     }
 
@@ -62,6 +64,49 @@ class User extends Authenticatable
     public function localNow(): Carbon
     {
         return Carbon::now($this->timezone ?: self::DEFAULT_TIMEZONE);
+    }
+
+    /**
+     * Wrong PINs before the PIN turns off (rule 6). Unlike a child's, it
+     * stays off until the next email-and-password sign-in, not for a while.
+     */
+    public const MAX_PIN_ATTEMPTS = 5;
+
+    public function hasPin(): bool
+    {
+        return $this->pin_hash !== null;
+    }
+
+    /** Whether the PIN can be used to sign in right now. */
+    public function pinUsable(): bool
+    {
+        return $this->hasPin() && $this->pin_locked_at === null;
+    }
+
+    /**
+     * Counts a wrong PIN, and turns the PIN off at the fifth. Returns the
+     * tries left; zero means it is now off.
+     */
+    public function registerFailedPin(): int
+    {
+        $attempts = $this->pin_failed_attempts + 1;
+        $this->forceFill([
+            'pin_failed_attempts' => $attempts,
+            'pin_locked_at' => $attempts >= self::MAX_PIN_ATTEMPTS ? Carbon::now() : null,
+        ])->save();
+
+        return max(0, self::MAX_PIN_ATTEMPTS - $attempts);
+    }
+
+    /**
+     * Forgets wrong PINs and turns a locked PIN back on: after a right PIN,
+     * an email-and-password sign-in, a password reset, or a new PIN.
+     */
+    public function clearPinAttempts(): void
+    {
+        if ($this->pin_failed_attempts !== 0 || $this->pin_locked_at !== null) {
+            $this->forceFill(['pin_failed_attempts' => 0, 'pin_locked_at' => null])->save();
+        }
     }
 
     public function children(): HasMany

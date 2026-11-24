@@ -1,17 +1,23 @@
-"""M3: split by household, never by clip.
+"""M3, DS-4: split by person and household, never by clip.
 
     python ml/03_make_splits.py [--seed 7] [--val 0.15] [--test 0.15]
 
 Writes data/splits.json: {"train": [...], "val": [...], "test": [...]}, lists
-of households. A home in training must not appear in testing, or every number
-in Chapter 4 is flattering and wrong, so the split is made over households
-(EPIC participants, Kinetics videos, your H-numbers), and the script stops with
-an error if any household ends up in two splits.
+of households. A person or home in training must not appear in testing, or
+every number in Chapter 4 is flattering and wrong, so the split is made over
+households (EPIC participants, HomER people, your H-numbers), and the script
+stops with an error if any household ends up in two splits.
 
-Your own homes are split on their own, so the in-domain clips that matter most
-are in every split; the public households are split the same way beside them.
-Within each, households are shuffled with the seed and dealt out until each
-split holds about its share of clips.
+HomER v2 has no participant ids. Its household is the person the labeller
+named in 10_label_homer.py ("Recorded by"); a video no one matched to another
+counts as its own person. Two videos of one person the labeller did not
+recognise could still land on both sides: say so in Chapter 3.
+
+Your own homes, HomER's people and EPIC's participants are each split on their
+own, so every split holds some of each: your in-domain clips matter most, and
+HomER is the closest public match to a strapped-on phone. Within each group,
+households are shuffled with the seed and dealt out until each split holds
+about its share of clips.
 """
 import argparse
 import random
@@ -61,22 +67,23 @@ def main():
     sizes = Counter(c["household"] for c in clips)
     rng = random.Random(args.seed)
     own = {c["household"] for c in clips if c["domain"] == "own"}
-    public = set(sizes) - own
+    homer = {h for h in sizes if h.startswith("homer-")} - own
+    public = set(sizes) - own - homer
 
     splits = {"train": [], "val": [], "test": []}
-    for group in (own, public):
+    for group in (own, homer, public):
         if group:
             for name, households in deal(group, sizes, args.val, args.test, rng).items():
                 splits[name] += households
     check(splits)
     p.write_json(p.SPLITS_JSON, {name: sorted(households) for name, households in splits.items()})
 
-    print(f"{'split':6} {'homes':>6} {'own homes':>10} {'clips':>7} {'own clips':>10}")
+    print(f"{'split':6} {'homes':>6} {'own homes':>10} {'HomER people':>13} {'clips':>7} {'own clips':>10} {'HomER clips':>12}")
     for name, households in splits.items():
         chosen = set(households)
         rows = [c for c in clips if c["household"] in chosen]
-        print(f"{name:6} {len(chosen):>6} {len(chosen & own):>10} {len(rows):>7} "
-              f"{sum(c['domain'] == 'own' for c in rows):>10}")
+        print(f"{name:6} {len(chosen):>6} {len(chosen & own):>10} {len(chosen & homer):>13} {len(rows):>7} "
+              f"{sum(c['domain'] == 'own' for c in rows):>10} {sum(c['household'] in homer for c in rows):>12}")
     labels = sorted({c["label"] for c in clips})
     empty = [(name, label) for name, households in splits.items() for label in labels
              if not any(c["label"] == label and c["household"] in set(households) for c in clips)]

@@ -1,6 +1,6 @@
 {
   "_about": "Written by ml/export_catalogue.py from ml/chore_manifest.json. Edit the manifest, not this file.",
-  "version": 1,
+  "version": 2,
   "categories": [
     {
       "key": "kitchen",
@@ -352,9 +352,9 @@
       "min_age": 8,
       "max_age": 10,
       "difficulty": "medium",
-      "verification_mode": "lstm",
-      "model_class": 18,
-      "min_active_seconds": 30,
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
       "formerly": [],
       "default_points": 4
     },
@@ -369,7 +369,7 @@
       "max_age": 10,
       "difficulty": "easy",
       "verification_mode": "lstm",
-      "model_class": 19,
+      "model_class": 18,
       "min_active_seconds": 20,
       "formerly": [],
       "default_points": 3
@@ -384,9 +384,9 @@
       "min_age": 4,
       "max_age": 10,
       "difficulty": "easy",
-      "verification_mode": "lstm",
-      "model_class": 20,
-      "min_active_seconds": 10,
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
       "formerly": [],
       "default_points": 2
     },
@@ -400,9 +400,9 @@
       "min_age": 4,
       "max_age": 10,
       "difficulty": "easy",
-      "verification_mode": "lstm",
-      "model_class": 21,
-      "min_active_seconds": 15,
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
       "formerly": [],
       "default_points": 2
     },
@@ -417,7 +417,7 @@
       "max_age": 6,
       "difficulty": "easy",
       "verification_mode": "lstm",
-      "model_class": 22,
+      "model_class": 19,
       "min_active_seconds": 10,
       "formerly": [],
       "default_points": 1
@@ -433,7 +433,7 @@
       "max_age": 10,
       "difficulty": "medium",
       "verification_mode": "lstm",
-      "model_class": 23,
+      "model_class": 20,
       "min_active_seconds": 20,
       "formerly": [
         "Take out the rubbish"

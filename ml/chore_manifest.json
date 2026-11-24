@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "_about": "The single source of truth for which chores exist (the app's catalogue) and which classes the model learns. ml/check_manifest.py enforces the rule that every chore maps to a class in a dataset the team can train from; ml/export_catalogue.py writes the catalogue the server seeds from. model_class numbers the lstm chores; other_class is the extra 'not doing the chore' class.",
+  "version": 2,
+  "_about": "The single source of truth for which chores exist (the app's catalogue) and which classes the model learns. ml/check_manifest.py enforces that every movement-checked chore maps to a class in a first-person dataset the team can train from; a chore with none is checked by a parent (manual). ml/export_catalogue.py writes the catalogue the server seeds from. model_class numbers the lstm chores; other_class is the extra 'not doing the chore' class.",
   "datasets": {
     "epic_kitchens_100": {
       "name": "EPIC-KITCHENS-100",
@@ -8,17 +8,14 @@
       "view": "first-person (head-mounted)",
       "label_files": "EPIC_100_verb_classes.csv, EPIC_100_noun_classes.csv"
     },
-    "kinetics_400": {
-      "name": "Kinetics-400",
-      "licence": "research use; clips are web links, some gone",
-      "view": "third-person",
-      "label_files": "kinetics_400 label map"
-    },
-    "egochores": {
-      "name": "EgoChores",
-      "licence": "unknown",
-      "view": "unknown",
-      "label_files": "not supplied yet (CH-1)"
+    "homer_v2": {
+      "name": "HomER v2",
+      "publisher": "Toloka",
+      "licence": "CC BY 4.0",
+      "attribution": "HomER v2 by Toloka, CC BY 4.0",
+      "view": "first-person",
+      "label_files": "labels/homer_v2/segments.csv: the team's own chore segments (DS-3)",
+      "categories": ["Cleaning", "Dining Table Tasks", "Laundry & Garment Care", "Indoor Plant Activities", "Home Organization", "Food Preparation"]
     }
   },
   "categories": [
@@ -29,7 +26,7 @@
     {"key": "rubbish", "name": "Rubbish"},
     {"key": "study", "name": "Study"}
   ],
-  "other_class": 24,
+  "other_class": 21,
   "chores": [
     {
       "key": "wash_the_dishes",
@@ -49,7 +46,8 @@
       "formerly": [],
       "sources": [
         {"dataset": "epic_kitchens_100", "verbs": ["wash"], "nouns": ["plate", "bowl", "glass", "cup", "pan", "sponge", "sink"]},
-        {"dataset": "kinetics_400", "labels": ["washing dishes"]}
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["dishes", "washing up", "wash plates"]},
+        {"dataset": "homer_v2", "category": "Food Preparation", "describe": ["dishes", "washing up"]}
       ]
     },
     {
@@ -69,7 +67,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["dry"], "nouns": ["rack:drying", "towel", "plate", "cup"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["dry"], "nouns": ["rack:drying", "towel", "plate", "cup"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["dry dishes", "drying dishes", "tea towel"]}
       ]
     },
     {
@@ -89,7 +88,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["plate", "bowl", "cup", "glass", "cupboard", "drawer"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["plate", "bowl", "cup", "glass", "cupboard", "drawer"]},
+        {"dataset": "homer_v2", "category": "Home Organization", "describe": ["put away dishes", "cupboard", "plates away"]}
       ]
     },
     {
@@ -109,8 +109,8 @@
       "evidence": "strong",
       "formerly": [],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["setting table"]},
-        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["plate", "glass", "cutlery", "top"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["plate", "glass", "cutlery", "top"]},
+        {"dataset": "homer_v2", "category": "Dining Table Tasks", "describe": ["set the table", "setting the table", "cutlery", "plates"]}
       ]
     },
     {
@@ -130,7 +130,8 @@
       "evidence": "medium",
       "formerly": ["Clear the table"],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["take", "put", "wash"], "nouns": ["plate", "bowl", "cup", "top", "cloth", "sponge"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["take", "put", "wash"], "nouns": ["plate", "bowl", "cup", "top", "cloth", "sponge"]},
+        {"dataset": "homer_v2", "category": "Dining Table Tasks", "describe": ["clear the table", "clearing", "wipe the table", "wiping"]}
       ]
     },
     {
@@ -150,7 +151,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["put", "take"], "nouns": ["bag", "fridge", "cupboard"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["put", "take"], "nouns": ["bag", "fridge", "cupboard"]},
+        {"dataset": "homer_v2", "category": "Home Organization", "describe": ["groceries", "shopping", "fridge", "pantry"]}
       ]
     },
     {
@@ -170,7 +172,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["wash"], "nouns": ["rice"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["wash"], "nouns": ["rice"]},
+        {"dataset": "homer_v2", "category": "Food Preparation", "describe": ["rice", "rinse", "rinsing"]}
       ]
     },
     {
@@ -190,7 +193,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["prepare", "serve"], "nouns": [], "_nouns": "the food nouns, picked in M2 from EPIC_100_noun_classes.csv, leaving out knife and hob"}
+        {"dataset": "epic_kitchens_100", "verbs": ["prepare", "serve"], "nouns": [], "_nouns": "the food nouns, picked in M2 from EPIC_100_noun_classes.csv, leaving out knife and hob"},
+        {"dataset": "homer_v2", "category": "Food Preparation", "describe": ["snack", "sandwich", "fruit", "toast"]}
       ]
     },
     {
@@ -210,8 +214,8 @@
       "evidence": "strong",
       "formerly": [],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["sweeping floor"]},
-        {"dataset": "epic_kitchens_100", "verbs": ["brush"], "nouns": ["floor", "broom", "dustpan"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["brush"], "nouns": ["floor", "broom", "dustpan"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["sweep", "sweeping", "broom", "dustpan"]}
       ]
     },
     {
@@ -231,8 +235,8 @@
       "evidence": "strong",
       "formerly": [],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["mopping floor"]},
-        {"dataset": "epic_kitchens_100", "verbs": ["mop", "wash"], "nouns": ["floor"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["mop", "wash"], "nouns": ["floor"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["mop", "mopping"]}
       ]
     },
     {
@@ -250,10 +254,11 @@
       "model_class": null,
       "min_active_seconds": null,
       "evidence": "weak",
-      "_why_manual": "Only the EPIC noun-verb pair exists and Kinetics-400 has no vacuuming class: a parent checks it until the team has its own recordings (M10).",
+      "_why_manual": "Only an EPIC noun-verb pair exists: a parent checks it until HomER labelling or the team's own recordings (M10) give it enough clips.",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["hoover"], "nouns": ["floor"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["hoover"], "nouns": ["floor"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["vacuum", "vacuuming", "hoover"]}
       ]
     },
     {
@@ -273,8 +278,8 @@
       "evidence": "strong",
       "formerly": ["Wipe the windowsills"],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["cleaning windows"]},
-        {"dataset": "epic_kitchens_100", "verbs": ["wash", "scrub"], "nouns": ["window"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["wash", "scrub"], "nouns": ["window"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["window", "windows", "glass"]}
       ]
     },
     {
@@ -294,7 +299,8 @@
       "evidence": "medium",
       "formerly": ["Clean the bathroom sink"],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["scrub", "wash"], "nouns": ["sink", "sponge"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["scrub", "wash"], "nouns": ["sink", "sponge"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["sink", "basin", "scrub"]}
       ]
     },
     {
@@ -314,8 +320,8 @@
       "evidence": "strong",
       "formerly": [],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["making bed"]},
-        {"dataset": "epic_kitchens_100", "verbs": [], "nouns": ["sheets", "pillow"]}
+        {"dataset": "epic_kitchens_100", "verbs": [], "nouns": ["sheets", "pillow"]},
+        {"dataset": "homer_v2", "category": "Home Organization", "describe": ["make the bed", "making the bed", "bed", "sheets", "pillow"]}
       ]
     },
     {
@@ -335,7 +341,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["clothes", "basket"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["clothes", "basket"]},
+        {"dataset": "homer_v2", "category": "Laundry & Garment Care", "describe": ["hamper", "laundry basket", "dirty clothes"]}
       ]
     },
     {
@@ -355,7 +362,8 @@
       "evidence": "medium",
       "formerly": ["Sort laundry"],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["sort"], "nouns": ["clothes"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["sort"], "nouns": ["clothes"]},
+        {"dataset": "homer_v2", "category": "Laundry & Garment Care", "describe": ["sort", "sorting", "laundry"]}
       ]
     },
     {
@@ -375,8 +383,8 @@
       "evidence": "strong",
       "formerly": ["Fold the small clothes"],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["folding clothes"]},
-        {"dataset": "epic_kitchens_100", "verbs": ["fold"], "nouns": ["clothes", "towel"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["fold"], "nouns": ["clothes", "towel"]},
+        {"dataset": "homer_v2", "category": "Laundry & Garment Care", "describe": ["fold", "folding"]}
       ]
     },
     {
@@ -396,7 +404,8 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["hang"], "nouns": ["clothes", "airer", "clip"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["hang"], "nouns": ["clothes", "airer", "clip"]},
+        {"dataset": "homer_v2", "category": "Laundry & Garment Care", "describe": ["hang", "hanging", "clothesline", "drying rack", "pegs"]}
       ]
     },
     {
@@ -416,7 +425,9 @@
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["clothes", "drawer", "cupboard", "shelf"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["put"], "nouns": ["clothes", "drawer", "cupboard", "shelf"]},
+        {"dataset": "homer_v2", "category": "Laundry & Garment Care", "describe": ["wardrobe", "closet", "drawer", "put away clothes"]},
+        {"dataset": "homer_v2", "category": "Home Organization", "describe": ["wardrobe", "closet", "drawer"]}
       ]
     },
     {
@@ -430,14 +441,15 @@
       "max_age": 10,
       "points": 4,
       "difficulty": "medium",
-      "verification_mode": "lstm",
-      "model_class": 18,
-      "min_active_seconds": 30,
-      "evidence": "strong",
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
+      "evidence": "none yet: no first-person source (Phase 5 decision 2)",
       "formerly": [],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["cleaning shoes", "shining shoes"]}
-      ]
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["shoe", "shoes", "sneakers"]}
+      ],
+      "_why_manual": "Kinetics-400 was its only source and is dropped: first-person only (Phase 5 decision 2). A parent checks it until HomER labelling or the team's own recordings find it."
     },
     {
       "key": "water_the_plants",
@@ -451,13 +463,13 @@
       "points": 3,
       "difficulty": "easy",
       "verification_mode": "lstm",
-      "model_class": 19,
+      "model_class": 18,
       "min_active_seconds": 20,
       "evidence": "strong",
       "formerly": [],
       "sources": [
-        {"dataset": "kinetics_400", "labels": ["watering plants"]},
-        {"dataset": "epic_kitchens_100", "verbs": ["water"], "nouns": []}
+        {"dataset": "epic_kitchens_100", "verbs": ["water"], "nouns": []},
+        {"dataset": "homer_v2", "category": "Indoor Plant Activities", "describe": ["water", "watering", "plants"]}
       ]
     },
     {
@@ -471,14 +483,13 @@
       "max_age": 10,
       "points": 2,
       "difficulty": "easy",
-      "verification_mode": "lstm",
-      "model_class": 20,
-      "min_active_seconds": 10,
-      "evidence": "strong",
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
+      "evidence": "none yet: no first-person source (Phase 5 decision 2)",
       "formerly": [],
-      "sources": [
-        {"dataset": "kinetics_400", "labels": ["feeding fish"]}
-      ]
+      "sources": [],
+      "_why_manual": "Kinetics-400 was its only source and is dropped: first-person only (Phase 5 decision 2). A parent checks it until HomER labelling or the team's own recordings find it."
     },
     {
       "key": "feed_the_birds",
@@ -491,14 +502,13 @@
       "max_age": 10,
       "points": 2,
       "difficulty": "easy",
-      "verification_mode": "lstm",
-      "model_class": 21,
-      "min_active_seconds": 15,
-      "evidence": "strong",
+      "verification_mode": "manual",
+      "model_class": null,
+      "min_active_seconds": null,
+      "evidence": "none yet: no first-person source (Phase 5 decision 2)",
       "formerly": [],
-      "sources": [
-        {"dataset": "kinetics_400", "labels": ["feeding birds"]}
-      ]
+      "sources": [],
+      "_why_manual": "Kinetics-400 was its only source and is dropped: first-person only (Phase 5 decision 2). A parent checks it until HomER labelling or the team's own recordings find it."
     },
     {
       "key": "throw_rubbish_in_the_bin",
@@ -512,12 +522,13 @@
       "points": 1,
       "difficulty": "easy",
       "verification_mode": "lstm",
-      "model_class": 22,
+      "model_class": 19,
       "min_active_seconds": 10,
       "evidence": "medium",
       "formerly": [],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["throw"], "nouns": ["rubbish", "bin"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["throw"], "nouns": ["rubbish", "bin"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["trash", "rubbish", "garbage", "bin"]}
       ]
     },
     {
@@ -532,12 +543,13 @@
       "points": 4,
       "difficulty": "medium",
       "verification_mode": "lstm",
-      "model_class": 23,
+      "model_class": 20,
       "min_active_seconds": 20,
       "evidence": "medium",
       "formerly": ["Take out the rubbish"],
       "sources": [
-        {"dataset": "epic_kitchens_100", "verbs": ["empty"], "nouns": ["bin", "bag"]}
+        {"dataset": "epic_kitchens_100", "verbs": ["empty"], "nouns": ["bin", "bag"]},
+        {"dataset": "homer_v2", "category": "Cleaning", "describe": ["trash", "rubbish", "garbage", "bin bag", "take out"]}
       ]
     },
     {
@@ -555,11 +567,9 @@
       "model_class": null,
       "min_active_seconds": null,
       "evidence": "strong label, weak motion",
-      "_why_manual": "Kinetics-400 has the label, but reading shows almost no movement to see: a parent checks it until recordings show the model can tell it from sitting still.",
+      "_why_manual": "Reading shows almost no movement to see, and no first-person source has it: a parent checks it.",
       "formerly": ["Read 10 minutes"],
-      "sources": [
-        {"dataset": "kinetics_400", "labels": ["reading book"]}
-      ]
+      "sources": []
     }
   ]
 }

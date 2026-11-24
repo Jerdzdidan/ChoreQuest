@@ -7,7 +7,7 @@
     "input_size": 192,
     "frames_per_second": 4,
     "window": 16,
-    "other_class": 24
+    "other_class": 21
   },
   "defaults": {
     "min_probability": 0.6,

@@ -7,11 +7,12 @@ yourself, under their licences). It is fed each test clip frame by frame, 5
 frames a second at 172 x 172, as it was trained, and asked after every frame.
 
 A chore's probability is the sum of the probabilities of the Kinetics labels
-the manifest names for it; "other" is whatever is left. Recognition is then
+below for it (MoViNet is trained on Kinetics, which the manifest no longer
+uses: Phase 5 trains on first-person video only); "other" is whatever is left. Recognition is then
 scored exactly as 09 scores ours, into artifacts/chapter4/baseline_movinet_*.csv,
 so the Chapter 4 table can put the two side by side. MoViNet has no activity
 head, so its Done timing uses the probability alone (activity counted as 1),
-with our thresholds; chores the manifest gives no Kinetics label always score
+with our thresholds; chores with no Kinetics label above always score
 zero, which is part of the comparison.
 
 Not done here: training our model with and without MoveNet keypoint motion as
@@ -26,6 +27,18 @@ import pipeline as p
 
 FPS = 5
 SIZE = 172
+
+# The Kinetics labels nearest each chore, for MoViNet only.
+KINETICS = {
+    "wash_the_dishes": ["washing dishes"],
+    "set_the_table": ["setting table"],
+    "sweep_the_floor": ["sweeping floor"],
+    "mop_the_floor": ["mopping floor"],
+    "wipe_the_window": ["cleaning windows"],
+    "make_the_bed": ["making bed"],
+    "fold_the_clothes": ["folding clothes"],
+    "water_the_plants": ["watering plants"],
+}
 
 
 def main():
@@ -46,9 +59,7 @@ def main():
     index = {label: i for i, label in enumerate(kinetics)}
     mapping = []
     for key in keys[:-1]:
-        labels = [label for source in chores[key].get("sources", []) if source["dataset"] == "kinetics_400"
-                  for label in source.get("labels", []) if label in index]
-        mapping.append([index[label] for label in labels])
+        mapping.append([index[label] for label in KINETICS.get(key, []) if label in index])
     print(f"{sum(bool(m) for m in mapping)} of {len(mapping)} chores have a Kinetics label MoViNet knows.")
 
     interpreter = tf.lite.Interpreter(model_path=args.movinet)

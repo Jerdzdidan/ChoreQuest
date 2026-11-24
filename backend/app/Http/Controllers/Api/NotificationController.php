@@ -7,6 +7,7 @@ use App\Domain\Progress\ProgressService;
 use App\Domain\Verification\Routing;
 use App\Http\Controllers\Controller;
 use App\Models\AlarmEvent;
+use App\Models\AppLockPhone;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +37,11 @@ use Illuminate\Http\Request;
  * events (an alarm a grown-up stopped, one that timed out, a camera that was
  * missing) come in their own list, and so do yesterday's missed quests
  * (LS-12), which are never unread: they are a note, not news.
+ *
+ * App Lock (AL-4, rule 10) has its own list too: each phone where it is not
+ * working now, because a permission is missing or the phone has gone
+ * silent. It stays in the list for as long as that lasts, and counts as
+ * unread when it started after the list was last opened.
  */
 class NotificationController extends Controller
 {
@@ -57,12 +63,29 @@ class NotificationController extends Controller
             ->limit(50)
             ->get();
 
+        $now = now();
+        $appLock = AppLockPhone::where('user_id', $parent->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (AppLockPhone $phone) => [$phone, $phone->health($now)])
+            ->filter(fn (array $pair) => $pair[1]['since'] !== null)
+            ->map(fn (array $pair) => [
+                'device_key' => $pair[0]->device_key,
+                'name' => $pair[0]->name,
+                'state' => $pair[1]['state'],
+                'missing' => $pair[1]['missing'],
+                'since' => $pair[1]['since']->toIso8601String(),
+                'unread' => $seenAt === null || $pair[1]['since']->greaterThan($seenAt),
+            ])
+            ->values();
+
         $unread = Submission::whereIn('child_id', $childIds)
             ->when($seenAt, fn ($query) => $query->where('created_at', '>', $seenAt))
             ->count()
             + AlarmEvent::whereIn('child_id', $childIds)
                 ->when($seenAt, fn ($query) => $query->where('created_at', '>', $seenAt))
-                ->count();
+                ->count()
+            + $appLock->where('unread', true)->count();
 
         return response()->json([
             'unread_count' => $unread,
@@ -83,6 +106,7 @@ class NotificationController extends Controller
                 'unread' => $seenAt === null || $e->created_at->greaterThan($seenAt),
             ])->all(),
             'missed' => $this->missedYesterday($parent, $progress),
+            'app_lock' => $appLock->all(),
         ]);
     }
 

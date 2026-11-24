@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AlarmController;
 use App\Http\Controllers\Api\AllocationRuleController;
+use App\Http\Controllers\Api\AppLockPhoneController;
 use App\Http\Controllers\Api\AppRuleController;
 use App\Http\Controllers\Api\AppUnlockController;
 use App\Http\Controllers\Api\AssignmentController;
@@ -52,6 +53,12 @@ Route::get('/households/{householdCode}/children', [ChildAuthController::class, 
     ->middleware('throttle:20,1');
 Route::post('/child/login', [ChildAuthController::class, 'login'])
     ->middleware('throttle:10,1');
+
+// App Lock's watcher on a phone, with no one signed in: what it found
+// (AL-4). It proves which phone it is with the ticket it was given when
+// App Lock was turned on there.
+Route::post('/app-lock/status', [AppLockPhoneController::class, 'status'])
+    ->middleware('throttle:app-lock-status');
 
 /*
 |--------------------------------------------------------------------------
@@ -137,6 +144,11 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
     Route::patch('/app-rules', [AppRuleController::class, 'update']);
     Route::get('/app-unlocks', [AppUnlockController::class, 'index']);
     Route::post('/app-unlocks', [AppUnlockController::class, 'store']);
+    // The phones App Lock is on for, and turning it on or off on this one
+    // (AL-4).
+    Route::get('/app-lock/phones', [AppLockPhoneController::class, 'index']);
+    Route::put('/app-lock/phones', [AppLockPhoneController::class, 'update']);
+    Route::delete('/app-lock/phones', [AppLockPhoneController::class, 'destroy']);
 });
 
 /*

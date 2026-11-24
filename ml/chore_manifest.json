@@ -13,6 +13,8 @@
       "publisher": "Toloka",
       "licence": "CC BY 4.0",
       "attribution": "HomER v2 by Toloka, CC BY 4.0",
+      "source": "https://huggingface.co/datasets/toloka/homer-v2",
+      "citation": "@dataset{homer_v2_2026, title={HomER v2: Home Egocentric Robotics Dataset}, author={Toloka}, year={2026}, publisher={Hugging Face}}",
       "view": "first-person",
       "label_files": "labels/homer_v2/segments.csv: the team's own chore segments (DS-3)",
       "categories": ["Cleaning", "Dining Table Tasks", "Laundry & Garment Care", "Indoor Plant Activities", "Home Organization", "Food Preparation"]

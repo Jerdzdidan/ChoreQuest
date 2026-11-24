@@ -309,7 +309,7 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.palette_outlined),
           title: const Text('Artwork and credits'),
-          subtitle: const Text('Who drew the pictures in ChoreQuest'),
+          subtitle: const Text('Who drew the pictures, and the videos the movement check learned from'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const CreditsScreen()),

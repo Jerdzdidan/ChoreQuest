@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// The attribution HomER v2's licence asks for, as ml/chore_manifest.json
+/// gives it.
+const homerAttribution = 'HomER v2 by Toloka, CC BY 4.0';
+
 /// Who drew the artwork in ChoreQuest (L2).
 ///
 /// Kenney's packs are CC0 and ask for nothing; they are named because it
 /// costs nothing to say so. The badge drawings come from game-icons.net under
 /// CC BY 3.0, which does require the author's name beside each one, so every
 /// badge is listed with the artist who drew it.
+///
+/// Below the artwork, the videos the movement check learned from (DS-6).
 class CreditsScreen extends StatelessWidget {
   const CreditsScreen({super.key});
 
@@ -62,6 +68,26 @@ class CreditsScreen extends StatelessWidget {
             'Nothing here was changed except in size and colour, and the pieces '
             'used were cut from the packs above.',
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 32),
+          Semantics(
+            header: true,
+            child: Text(
+              'What the movement check learned from',
+              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // DS-6: CC BY 4.0 asks for the name, the licence and what was changed.
+          _Source(
+            title: 'HomER v2',
+            licence: 'CC BY 4.0 — Toloka must be named',
+            url: 'huggingface.co/datasets/toloka/homer-v2',
+            note: 'Videos of people doing jobs at home, filmed from their own '
+                'point of view. The ChoreQuest team marked where each chore '
+                'happens and cut those parts into short clips for the model to '
+                'learn from. No video is inside the app.',
+            items: const [homerAttribution],
           ),
         ],
       ),

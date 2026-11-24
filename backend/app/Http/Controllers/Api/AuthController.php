@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Parent-user authentication. Issues tokens carrying the `parent` ability only.
+ * Parent-user authentication. Issues tokens carrying the `parent` ability
+ * only, whether the parent typed their password or their PIN (rule 6).
  */
 class AuthController extends Controller
 {
@@ -20,6 +22,8 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            // The optional "Set a 4-digit PIN" step (PA-6).
+            'pin' => ['nullable', 'digits:4'],
         ]);
 
         $user = User::create([
@@ -29,10 +33,11 @@ class AuthController extends Controller
             'household_code' => User::generateHouseholdCode(),
         ]);
 
-        return response()->json([
-            'token' => $user->createToken('parent-device', ['parent'])->plainTextToken,
-            'parent' => self::parentPayload($user),
-        ], 201);
+        if (isset($data['pin'])) {
+            $user->forceFill(['pin_hash' => Hash::make($data['pin'])])->save();
+        }
+
+        return response()->json(self::signedIn($user, 'parent-device'), 201);
     }
 
     public function login(Request $request): JsonResponse
@@ -51,10 +56,79 @@ class AuthController extends Controller
             ]);
         }
 
-        return response()->json([
-            'token' => $user->createToken('parent-device', ['parent'])->plainTextToken,
-            'parent' => self::parentPayload($user),
+        // The password turns a PIN locked by wrong tries back on (rule 6).
+        $user->clearPinAttempts();
+
+        return response()->json(self::signedIn($user, 'parent-device'));
+    }
+
+    /**
+     * POST /parent/pin-login (PA-2): a parent's 4-digit PIN, on a phone where
+     * they signed in with their password before, which the pin ticket from
+     * that sign-in proves. The fifth wrong PIN turns the PIN off until the
+     * next email-and-password sign-in.
+     *
+     * A wrong household code, a parent from another household and a wrong
+     * PIN get the same answer, so nothing here confirms who has an account.
+     */
+    public function pinLogin(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'household_code' => ['required', 'string', 'size:6'],
+            'parent_id' => ['required', 'integer'],
+            'pin' => ['required', 'digits:4'],
+            'pin_ticket' => ['required', 'string', 'max:100'],
         ]);
+
+        // One at a time per parent, so tries made together cannot slip past
+        // the fifth.
+        return DB::transaction(function () use ($data) {
+            $user = User::where('household_code', strtoupper($data['household_code']))
+                ->whereKey($data['parent_id'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $user) {
+                return response()->json(['message' => 'That PIN is not right.'], 422);
+            }
+
+            // Before the PIN is looked at, so a phone that never saw the
+            // password cannot guess, or use up the parent's tries.
+            if (! $user->pinTicketMatches($data['pin_ticket'])) {
+                return response()->json([
+                    'message' => 'Sign in with your email and password on this phone first.',
+                ], 423);
+            }
+
+            if (! $user->hasPin()) {
+                return response()->json([
+                    'message' => 'You have no sign-in PIN. Sign in with your email and password.',
+                ], 423);
+            }
+
+            if (! $user->pinUsable()) {
+                return response()->json([
+                    'message' => 'Too many tries. Sign in with your email and password.',
+                ], 423);
+            }
+
+            if (! Hash::check($data['pin'], $user->pin_hash)) {
+                $left = $user->registerFailedPin();
+
+                return $left === 0
+                    ? response()->json(['message' => 'Too many tries. Sign in with your email and password.'], 423)
+                    : response()->json([
+                        'message' => $left === 1
+                            ? 'That PIN is not right. 1 try left.'
+                            : "That PIN is not right. {$left} tries left.",
+                        'tries_left' => $left,
+                    ], 422);
+            }
+
+            $user->clearPinAttempts();
+
+            return response()->json(self::signedIn($user, 'parent-pin'));
+        });
     }
 
     /**
@@ -99,6 +173,23 @@ class AuthController extends Controller
             'household_code' => $user->household_code,
             'avatar' => $user->avatar,
             'timezone' => $user->timezone,
+            'has_pin' => $user->hasPin(),
+        ];
+    }
+
+    /**
+     * A parent token, named for how it was earned so the token table shows
+     * which sign-ins used a PIN, and the ticket that lets this phone use the
+     * PIN next time.
+     *
+     * @return array{token: string, parent: array, pin_ticket: string}
+     */
+    private static function signedIn(User $user, string $how): array
+    {
+        return [
+            'token' => $user->createToken($how, ['parent'])->plainTextToken,
+            'parent' => self::parentPayload($user),
+            'pin_ticket' => $user->pinTicket(),
         ];
     }
 }

@@ -11,10 +11,11 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The parent's own account: their name, email, picture and password.
+ * The parent's own account: their name, email, picture, password and
+ * sign-in PIN.
  *
- * Only what is sent changes. A new password needs the current one, so a phone
- * left unlocked cannot be used to take the account over.
+ * Only what is sent changes. A new password or PIN needs the current
+ * password, so a phone left unlocked cannot be used to take the account over.
  */
 class AccountController extends Controller
 {
@@ -34,15 +35,73 @@ class AccountController extends Controller
             'current_password' => ['required_with:password', 'string'],
         ]);
 
-        if (isset($data['password']) && ! Hash::check($data['current_password'] ?? '', $parent->password)) {
-            throw ValidationException::withMessages([
-                'current_password' => ['That is not your current password.'],
-            ]);
+        if (isset($data['password'])) {
+            self::checkPassword($parent, $data['current_password'] ?? '');
         }
 
         $parent->fill(array_intersect_key($data, array_flip(['name', 'email', 'avatar', 'password'])));
         $parent->save();
+        $parent = $parent->fresh();
 
-        return response()->json(['parent' => AuthController::parentPayload($parent->fresh())]);
+        // A new password retires every phone's pin ticket (rule 6). This
+        // phone has just shown the password, so it gets a fresh one; the
+        // others need the new password before their PIN works again.
+        return response()->json([
+            'parent' => AuthController::parentPayload($parent),
+            ...(isset($data['password']) ? ['pin_ticket' => $parent->pinTicket()] : []),
+        ]);
+    }
+
+    /**
+     * PUT /me/pin (PA-2): sets or changes the parent's sign-in PIN, after
+     * the current password. Also turns a PIN locked by wrong tries back on.
+     */
+    public function setPin(Request $request): JsonResponse
+    {
+        /** @var User $parent */
+        $parent = $request->user();
+
+        $data = $request->validate([
+            'pin' => ['required', 'digits:4'],
+            'current_password' => ['required', 'string'],
+        ]);
+
+        self::checkPassword($parent, $data['current_password']);
+
+        $parent->forceFill([
+            'pin_hash' => Hash::make($data['pin']),
+            'pin_failed_attempts' => 0,
+            'pin_locked_at' => null,
+        ])->save();
+
+        return response()->json([
+            'parent' => AuthController::parentPayload($parent),
+            // The password was just typed on this phone.
+            'pin_ticket' => $parent->pinTicket(),
+        ]);
+    }
+
+    /** DELETE /me/pin (PA-2): turns the sign-in PIN off. */
+    public function removePin(Request $request): JsonResponse
+    {
+        /** @var User $parent */
+        $parent = $request->user();
+
+        $parent->forceFill([
+            'pin_hash' => null,
+            'pin_failed_attempts' => 0,
+            'pin_locked_at' => null,
+        ])->save();
+
+        return response()->json(['parent' => AuthController::parentPayload($parent)]);
+    }
+
+    private static function checkPassword(User $parent, string $password): void
+    {
+        if (! Hash::check($password, $parent->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['That is not your current password.'],
+            ]);
+        }
     }
 }

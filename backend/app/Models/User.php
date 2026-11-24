@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Auth\PinTicket;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -75,6 +76,20 @@ class User extends Authenticatable
     public function hasPin(): bool
     {
         return $this->pin_hash !== null;
+    }
+
+    /**
+     * What a phone keeps after an email-and-password sign-in, so the PIN
+     * works there (rule 6). A new password retires it.
+     */
+    public function pinTicket(): string
+    {
+        return PinTicket::issue((string) config('app.key'), $this->id, $this->password);
+    }
+
+    public function pinTicketMatches(string $ticket): bool
+    {
+        return PinTicket::matches($ticket, (string) config('app.key'), $this->id, $this->password);
     }
 
     /** Whether the PIN can be used to sign in right now. */

@@ -28,5 +28,13 @@ class AppServiceProvider extends ServiceProvider
         // (a token holder, not an Authenticatable) does not have.
         RateLimiter::for('alarm-override', fn (Request $request) => Limit::perMinute(5)
             ->by('alarm-override:'.($request->user()?->getKey() ?? $request->ip())));
+
+        // Setting a sign-in PIN checks the parent's password (PA-2): six
+        // tries a minute per account. Named for the same reason: the throttle
+        // runs before abilities:parent turns a child token away, so it must
+        // not need getAuthIdentifier(). Keyed by kind as well as id, so a
+        // child cannot use up the parent with the same number's tries.
+        RateLimiter::for('pin-change', fn (Request $request) => Limit::perMinute(6)
+            ->by('pin-change:'.($request->user() ? class_basename($request->user()).':'.$request->user()->getKey() : $request->ip())));
     }
 }

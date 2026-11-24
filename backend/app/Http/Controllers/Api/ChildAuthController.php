@@ -20,6 +20,11 @@ class ChildAuthController extends Controller
     /**
      * The avatar picker. Returns first names and avatars only — never a
      * birthdate, never a lock state, nothing that would reward guessing codes.
+     *
+     * The grown-ups are listed too, for the grown-up "Who are you?" (PA-2),
+     * with whether their PIN can be used. A PIN that is off, or turned off
+     * by wrong tries, sends the phone to email and password; it cannot be
+     * guessed at any more, so saying so gives nothing away.
      */
     public function roster(string $householdCode): JsonResponse
     {
@@ -37,6 +42,13 @@ class ChildAuthController extends Controller
                     'name' => $c->name,
                     'avatar' => $c->avatar,
                 ])->all(),
+            // One grown-up per household for now: the account holder.
+            'parents' => [[
+                'id' => $parent->id,
+                'name' => $parent->name,
+                'avatar' => $parent->avatar,
+                'pin' => $parent->pinUsable(),
+            ]],
         ]);
     }
 

@@ -37,6 +37,8 @@ Route::get('/health', fn () => response()->json([
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+// A parent's PIN, on a phone where they signed in with their password (PA-2).
+Route::post('/parent/pin-login', [AuthController::class, 'pinLogin'])->middleware('throttle:6,1');
 
 Route::get('/households/{householdCode}/children', [ChildAuthController::class, 'roster'])
     ->middleware('throttle:20,1');
@@ -73,6 +75,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
     // The parent's own account: name, email, picture, password.
     Route::patch('/me', [AccountController::class, 'update']);
+    // The sign-in PIN (PA-2). Setting one asks for the password.
+    Route::put('/me/pin', [AccountController::class, 'setPin'])->middleware('throttle:pin-change');
+    Route::delete('/me/pin', [AccountController::class, 'removePin']);
 
     Route::apiResource('children', ChildController::class);
 

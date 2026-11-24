@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\MyScheduleController;
 use App\Http\Controllers\Api\MyAvatarController;
 use App\Http\Controllers\Api\MyCosmeticsController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SessionController;
@@ -39,6 +40,10 @@ Route::post('/register', [AuthController::class, 'register'])->middleware('throt
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 // A parent's PIN, on a phone where they signed in with their password (PA-2).
 Route::post('/parent/pin-login', [AuthController::class, 'pinLogin'])->middleware('throttle:6,1');
+// A forgotten password, reset with a 6-digit code sent by email (PA-3).
+Route::post('/password/forgot', [PasswordResetController::class, 'forgot'])->middleware('throttle:6,1');
+Route::post('/password/verify-code', [PasswordResetController::class, 'verifyCode'])->middleware('throttle:6,1');
+Route::post('/password/reset', [PasswordResetController::class, 'reset'])->middleware('throttle:6,1');
 
 Route::get('/households/{householdCode}/children', [ChildAuthController::class, 'roster'])
     ->middleware('throttle:20,1');

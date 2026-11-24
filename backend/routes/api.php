@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AlarmController;
 use App\Http\Controllers\Api\AllocationRuleController;
+use App\Http\Controllers\Api\AppRuleController;
+use App\Http\Controllers\Api\AppUnlockController;
 use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChildAuthController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\ScreenTimeController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TimezoneController;
@@ -64,6 +67,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // The movement model's thresholds, tunable without a rebuild (BE-6).
     Route::get('/model-config', [ModelConfigController::class, 'show']);
+
+    // This phone's App Lock rules (AL-2), read by the phone whoever is
+    // signed in on it.
+    Route::get('/app-rules', [AppRuleController::class, 'index']);
 });
 
 /*
@@ -122,6 +129,14 @@ Route::middleware(['auth:sanctum', 'abilities:parent'])->group(function () {
     // One notification per photo sent, from the submissions themselves.
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/seen', [NotificationController::class, 'seen']);
+
+    // App Lock (AL-2): set this phone's apps to Open, Earned time or
+    // Grown-ups only, and the record of locked apps opened. A grown-up
+    // opening one is recorded here, with the token their PIN just earned,
+    // before the phone opens it (rule 10).
+    Route::patch('/app-rules', [AppRuleController::class, 'update']);
+    Route::get('/app-unlocks', [AppUnlockController::class, 'index']);
+    Route::post('/app-unlocks', [AppUnlockController::class, 'store']);
 });
 
 /*
@@ -170,4 +185,7 @@ Route::middleware(['auth:sanctum', 'abilities:child'])->group(function () {
     // The grown-up stop: the parent's password on the child's phone (BE-10).
     // Rate-limited, as a password check must be.
     Route::post('/alarm/override', [AlarmController::class, 'override'])->middleware('throttle:alarm-override');
+
+    // One minute of an Earned time app, spent by the server (AL-2, rule 9).
+    Route::post('/screen-time/minutes', [ScreenTimeController::class, 'store'])->middleware('throttle:screen-time');
 });

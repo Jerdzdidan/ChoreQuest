@@ -36,5 +36,11 @@ class AppServiceProvider extends ServiceProvider
         // child cannot use up the parent with the same number's tries.
         RateLimiter::for('pin-change', fn (Request $request) => Limit::perMinute(6)
             ->by('pin-change:'.($request->user() ? class_basename($request->user()).':'.$request->user()->getKey() : $request->ip())));
+
+        // Spending a minute of a locked app (AL-2): one a minute is the
+        // pace, so six a minute per child leaves room for two phones and a
+        // retry, and stops a runaway phone draining a child's minutes.
+        RateLimiter::for('screen-time', fn (Request $request) => Limit::perMinute(6)
+            ->by('screen-time:'.($request->user() ? class_basename($request->user()).':'.$request->user()->getKey() : $request->ip())));
     }
 }

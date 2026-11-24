@@ -1,199 +1,129 @@
+"""DS-2: fetch HomER v2's metadata and shortlist the videos that may show a chore.
+
+    python ml/00_intake.py              # fetch (or refresh) and shortlist
+    python ml/00_intake.py --offline    # shortlist again from the saved copy
+
+HomER v2 (Toloka, CC BY 4.0) holds 765 first-person household videos, about
+100 hours, from 420 people. It ships links, not videos, and the links are
+signed: they expire. This script saves every row, links included, to
+data/homer_v2/videos.json (never committed: the links are as good as a key
+while they last). Run it again whenever a download says a link has expired;
+nothing else needs redoing.
+
+The rows come from Hugging Face's dataset viewer, the same rows as the
+dataset's parquet file, as JSON, so no parquet library is needed.
+
+Then the shortlist, data/homer_v2/shortlist.csv: only the six categories that
+hold chores, and of those only the videos whose description uses a word the
+manifest gives a chore for that category (its HomER "describe" words). That is
+what the team watches and labels (10_label_homer.py). A video is 146 MB to
+1 GB, so nothing is downloaded here: labelling streams it, and
+02_extract_clips.py downloads only the labelled ones, one at a time, cuts
+them and deletes the original.
 """
-Files one household's chore photographs into the dataset and records them.
-
-    python 00_intake.py --household H03 --chore made_bed --state done <folder>
-
-The layout it builds:
-
-    ml/dataset/raw/<household>/<chore>/<state>/<household>_<chore>_<state>_NNNN.jpg
-    ml/dataset/manifest.csv
-
-Three things happen on the way in, and each is deliberate.
-
-EXIF is stripped. A photograph taken on a phone inside a home carries GPS
-coordinates, the capture time, and the device identifier. These are pictures of
-children's bedrooms, and the study cites the Data Privacy Act of 2012, so that
-metadata is removed at intake rather than trusted to be ignored later. The image
-is re-encoded from pixel data alone.
-
-Households are numbered, not named. The folder is H01, H02 and so on. Keep the
-mapping from a number to a family on paper with the consent forms, never in the
-repository.
-
-Images are downscaled to 640px on the long edge. MobileNetV2 trains at 224x224,
-so anything larger is storage and copying time for detail the model discards.
-
-Chores must be one of the three classes the model is trained for. The catalogue
-in the backend marks these with a verification_class; nothing else has one, and
-photographs of other chores are not training data for this study.
-"""
-
 import argparse
-import csv
-import hashlib
-import sys
-from pathlib import Path
+import datetime
+import json
+import re
+import time
+import urllib.error
+import urllib.request
 
-try:
-    from PIL import Image
-except ImportError:
-    sys.exit("Pillow is missing. Run: pip install -r requirements.txt")
+import pipeline as p
 
-ROOT = Path(__file__).resolve().parent
-RAW = ROOT / "dataset" / "raw"
-MANIFEST = ROOT / "dataset" / "manifest.csv"
-
-CHORES = ("made_bed", "cleared_table", "swept_floor")
-STATES = ("done", "not_done")
-SUFFIXES = {".jpg", ".jpeg", ".png", ".heic", ".webp", ".bmp"}
-MAX_EDGE = 640
-
-FIELDS = [
-    "household", "chore", "state", "filename",
-    "file_sha256", "ahash", "width", "height", "source_name",
-]
+PAGE = 100
+SHORTLIST_COLUMNS = ["video_id", "category", "chores", "duration_sec", "size_mb", "description"]
 
 
-def average_hash(img: Image.Image) -> str:
-    """
-    A small perceptual fingerprint, used in 01_organise.py to notice the same
-    photograph filed under two households. A plain file hash would miss it,
-    because re-saving a copy changes the bytes but not the picture.
-    """
-    small = img.convert("L").resize((8, 8), Image.Resampling.LANCZOS)
-    pixels = small.tobytes()
-    mean = sum(pixels) / len(pixels)
-    bits = "".join("1" if p > mean else "0" for p in pixels)
-    return f"{int(bits, 2):016x}"
+def fetch_rows(url=p.HOMER_ROWS, opener=urllib.request.urlopen):
+    """Every row of HomER v2, a page at a time."""
+    rows, offset, total = [], 0, None
+    while total is None or offset < total:
+        page_url = f"{url}&offset={offset}&length={PAGE}"
+        for attempt in range(4):
+            try:
+                with opener(page_url, timeout=60) as response:
+                    page = json.load(response)
+                break
+            except (urllib.error.URLError, TimeoutError) as e:
+                if attempt == 3:
+                    p.fail(f"could not reach the dataset viewer ({e}); try again later")
+                time.sleep(5 * (attempt + 1))
+        total = page["num_rows_total"]
+        for item in page["rows"]:
+            if item.get("truncated_cells"):
+                p.fail(f"row {item['row_idx']} came back with cells cut short ({item['truncated_cells']}); "
+                       "its link would not work. Download the dataset's parquet file instead.")
+            rows.append(item["row"])
+        if not page["rows"]:
+            break
+        offset += len(page["rows"])
+    return rows
 
 
-def load_manifest() -> list[dict]:
-    if not MANIFEST.exists():
-        return []
-    with MANIFEST.open(newline="", encoding="utf8") as fh:
-        return list(csv.DictReader(fh))
+def shortlist(rows, manifest):
+    """Videos in a chore category whose description uses one of a chore's
+    words for that category, with the chores it may show."""
+    wants = {}
+    for chore in manifest["chores"]:
+        for source in chore.get("sources", []):
+            if source.get("dataset") == "homer_v2":
+                code = p.HOMER_CATEGORY_CODES[source["category"]]
+                patterns = [re.compile(r"\b" + re.escape(w.lower()) + r"\b") for w in source["describe"]]
+                wants.setdefault(code, []).append((chore["key"], patterns))
+    out = []
+    for row in rows:
+        description = (row.get("description") or "").lower()
+        chores = sorted({key for key, patterns in wants.get(row.get("category"), [])
+                         if any(pattern.search(description) for pattern in patterns)})
+        if chores:
+            out.append({
+                "video_id": row["id"],
+                "category": row["category"],
+                "chores": ";".join(chores),
+                "duration_sec": row.get("duration_sec", ""),
+                "size_mb": row.get("size_mb", ""),
+                "description": row.get("description", ""),
+            })
+    return out
 
 
-def write_manifest(rows: list[dict]) -> None:
-    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    with MANIFEST.open("w", newline="", encoding="utf8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=FIELDS)
-        writer.writeheader()
-        writer.writerows(rows)
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--offline", action="store_true", help="shortlist again from data/homer_v2/videos.json")
+    args = parser.parse_args()
 
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description="File one household's chore photos.")
-    ap.add_argument("source", type=Path, help="folder of photographs to import")
-    ap.add_argument("--household", required=True, help="anonymous id, e.g. H03")
-    ap.add_argument("--chore", required=True, choices=CHORES)
-    ap.add_argument("--state", required=True, choices=STATES)
-    ap.add_argument("--dry-run", action="store_true")
-    args = ap.parse_args()
-
-    household = args.household.strip().upper()
-    if not (len(household) >= 2 and household[0] == "H" and household[1:].isdigit()):
-        return fail(f"--household should look like H01, got {household!r}")
-
-    if not args.source.is_dir():
-        return fail(f"{args.source} is not a folder")
-
-    photos = sorted(p for p in args.source.iterdir() if p.suffix.lower() in SUFFIXES)
-    if not photos:
-        return fail(f"no images found in {args.source}")
-
-    rows = load_manifest()
-    seen_hashes = {r["file_sha256"] for r in rows}
-
-    target = RAW / household / args.chore / args.state
-    existing = len(list(target.glob("*.jpg"))) if target.exists() else 0
-
-    print(f"{len(photos)} image(s) -> {target.relative_to(ROOT)}")
-    if existing:
-        print(f"  ({existing} already filed here; numbering continues)")
-
-    added, skipped = 0, 0
-
-    for photo in photos:
-        try:
-            img = Image.open(photo)
-            img.load()
-        except Exception as exc:
-            print(f"  skip {photo.name}: cannot read ({exc})")
-            skipped += 1
-            continue
-
-        img = img.convert("RGB")
-        if max(img.size) > MAX_EDGE:
-            scale = MAX_EDGE / max(img.size)
-            img = img.resize(
-                (round(img.width * scale), round(img.height * scale)),
-                Image.Resampling.LANCZOS,
-            )
-
-        index = existing + added + 1
-        name = f"{household}_{args.chore}_{args.state}_{index:04d}.jpg"
-        dest = target / name
-
-        if args.dry_run:
-            print(f"  would write {name}")
-            added += 1
-            continue
-
-        target.mkdir(parents=True, exist_ok=True)
-
-        # Pasted into a fresh image and re-encoded, so nothing from the
-        # original info dict -- EXIF, GPS, device id -- can travel with it.
-        clean = Image.new("RGB", img.size)
-        clean.paste(img)
-        clean.save(dest, "JPEG", quality=90)
-
-        digest = hashlib.sha256(dest.read_bytes()).hexdigest()
-        if digest in seen_hashes:
-            print(f"  skip {photo.name}: identical file already in the dataset")
-            dest.unlink()
-            skipped += 1
-            continue
-
-        seen_hashes.add(digest)
-        rows.append({
-            "household": household,
-            "chore": args.chore,
-            "state": args.state,
-            "filename": str(dest.relative_to(RAW)).replace("\\", "/"),
-            "file_sha256": digest,
-            "ahash": average_hash(clean),
-            "width": clean.width,
-            "height": clean.height,
-            "source_name": photo.name,
+    manifest = p.load_manifest()
+    if args.offline:
+        rows = list(p.homer_videos().values())
+    else:
+        rows = fetch_rows()
+        p.HOMER_DIR.mkdir(parents=True, exist_ok=True)
+        p.write_json(p.HOMER_VIDEOS, {
+            "dataset": p.HOMER_DATASET,
+            "fetched_at": datetime.datetime.now().isoformat(timespec="seconds"),
+            "rows": rows,
         })
-        added += 1
+        print(f"Saved {len(rows)} videos' metadata to {p.HOMER_VIDEOS.relative_to(p.ML)} (links refreshed).")
 
-    if not args.dry_run:
-        write_manifest(rows)
+    chosen = shortlist(rows, manifest)
+    p.write_rows(p.HOMER_SHORTLIST, SHORTLIST_COLUMNS, chosen)
 
-    print(f"\nfiled {added}, skipped {skipped}. manifest now holds {len(rows)} image(s).")
-    summarise(rows)
-    return 0
-
-
-def summarise(rows: list[dict]) -> None:
-    if not rows:
-        return
-    households = sorted({r["household"] for r in rows})
-    print(f"\nhouseholds: {len(households)} ({', '.join(households)})")
-    print(f"{'chore':<16}{'state':<10}{'images':>8}")
-    for chore in CHORES:
-        for state in STATES:
-            n = sum(1 for r in rows if r["chore"] == chore and r["state"] == state)
-            flag = "" if n >= 300 else "   <- thin"
-            print(f"{chore:<16}{state:<10}{n:>8}{flag}")
-
-
-def fail(message: str) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return 1
+    in_categories = [r for r in rows if r.get("category") in p.HOMER_CATEGORY_CODES.values()]
+    hours = sum(float(r["duration_sec"] or 0) for r in chosen) / 3600
+    gigabytes = sum(float(r["size_mb"] or 0) for r in chosen) / 1024
+    print(f"{len(in_categories)} videos are in the six chore categories; {len(chosen)} are shortlisted "
+          f"({hours:.1f} hours to watch, {gigabytes:.1f} GB if every one were downloaded).")
+    per_chore = {}
+    for row in chosen:
+        for key in row["chores"].split(";"):
+            per_chore[key] = per_chore.get(key, 0) + 1
+    print(f"\n{'chore':34} {'videos':>6}")
+    for chore in manifest["chores"]:
+        if any(s.get("dataset") == "homer_v2" for s in chore.get("sources", [])):
+            print(f"{chore['key']:34} {per_chore.get(chore['key'], 0):>6}")
+    print(f"\nWrote {p.HOMER_SHORTLIST.relative_to(p.ML)}. Label it with 10_label_homer.py.")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

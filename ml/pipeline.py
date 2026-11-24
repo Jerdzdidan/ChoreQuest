@@ -65,6 +65,30 @@ SMOOTHING = 3  # each signal is the mean of the last three outputs, as on the ph
 SHORT_SIDE = 256  # clips and cached frames are this tall (or wide), no more
 CLIP_COLUMNS = ["clip", "source", "household", "start", "end", "label", "domain"]
 
+# HomER v2 (DS-2, DS-3): Toloka's first-person household videos, CC BY 4.0.
+# Its metadata (the rows of its parquet file, signed video links included)
+# comes from Hugging Face's dataset viewer, so no parquet library is needed.
+HOMER_DATASET = "toloka/homer-v2"
+HOMER_ROWS = "https://datasets-server.huggingface.co/rows?dataset=toloka%2Fhomer-v2&config=default&split=train"
+HOMER_DIR = DATA / "homer_v2"
+HOMER_VIDEOS = HOMER_DIR / "videos.json"        # every row, links included (never committed)
+HOMER_SHORTLIST = HOMER_DIR / "shortlist.csv"   # videos whose description names a chore
+HOMER_LABELS = ML / "labels" / "homer_v2"
+HOMER_SEGMENTS = HOMER_LABELS / "segments.csv"  # the team's labels: video_id, start, end, chore_key
+HOMER_PEOPLE = HOMER_LABELS / "videos.csv"      # per video: who recorded it (as far as the team can tell), done or skipped
+SEGMENT_COLUMNS = ["video_id", "start", "end", "chore_key"]
+PEOPLE_COLUMNS = ["video_id", "person", "status"]
+
+# The manifest names HomER's categories as its card does; the data uses codes.
+HOMER_CATEGORY_CODES = {
+    "Cleaning": "cleaning",
+    "Dining Table Tasks": "dining_table_tasks",
+    "Laundry & Garment Care": "laundry_garment_care",
+    "Indoor Plant Activities": "indoor_plants_activities",
+    "Home Organization": "home_organization",
+    "Food Preparation": "food_preparation",
+}
+
 
 def fail(message):
     sys.exit(f"error: {message}")
@@ -220,6 +244,46 @@ def done_time(signals, target, gate):
 
 
 # ---------------------------------------------------------------- clips and splits
+
+def homer_videos():
+    """HomER's rows by video id, as 00_intake.py saved them."""
+    if not HOMER_VIDEOS.exists():
+        fail(f"{HOMER_VIDEOS} is missing; run 00_intake.py first")
+    with open(HOMER_VIDEOS, encoding="utf-8") as f:
+        return {str(row["id"]): row for row in json.load(f)["rows"]}
+
+
+def read_rows(path, columns):
+    """A CSV the team keeps, as dicts; empty when there is none yet."""
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    missing = [c for c in columns if rows and c not in rows[0]]
+    if missing:
+        fail(f"{path} has no column {', '.join(missing)}")
+    return rows
+
+
+def write_rows(path, columns, rows):
+    """Writes a CSV the team keeps, to a new file first, so a crash part-way
+    leaves the old one whole."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(".tmp")
+    with open(temp, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows({c: row.get(c, "") for c in columns} for row in rows)
+    temp.replace(path)
+
+
+def homer_person(video_id, people=None):
+    """Who recorded a HomER video, as the team marked it. HomER has no
+    participant ids, so a video is its own person unless marked otherwise."""
+    people = people if people is not None else {r["video_id"]: r for r in read_rows(HOMER_PEOPLE, PEOPLE_COLUMNS)}
+    person = (people.get(str(video_id)) or {}).get("person", "").strip()
+    return person or f"video-{video_id}"
+
 
 def read_clips():
     if not CLIPS_CSV.exists():

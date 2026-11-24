@@ -9,16 +9,23 @@ Where it looks (all under ml/, none of it committed):
     labels/epic_kitchens_100/EPIC_100_train.csv, EPIC_100_validation.csv,
         EPIC_100_verb_classes.csv, EPIC_100_noun_classes.csv
     data/raw/epic_kitchens_100/<participant>/videos/<video_id>.MP4
-    labels/kinetics_400/train.csv, validate.csv (or val.csv), test.csv
-        (label, youtube_id, time_start, time_end, split)
-    data/raw/kinetics_400/<split>/<youtube_id>_<start:06d>_<end:06d>.mp4
+    labels/homer_v2/segments.csv and videos.csv   (the team's, 10_label_homer.py)
+    data/homer_v2/videos.json                     (00_intake.py: the video links)
     data/raw/own/<household>/<chore key or other>/<any video>   (M10)
+
+HomER v2's videos are 146 MB to 1 GB each and the set is hundreds of
+gigabytes, so only labelled videos are fetched, one at a time: downloaded to
+data/raw/homer_v2/, every segment cut, then the original deleted, so the disk
+holds one video at most. A link that has expired stops the run with a note to
+run 00_intake.py again, which refreshes them; clips already cut stay cut.
 
 For EPIC-KITCHENS a row is a chore's when its verb is one of the chore's verbs
 and one of the row's nouns is one of its nouns (a chore that lists no verbs, or
 no nouns, matches on the other alone). A row two chores would both claim is
 left out, since a clip labelled two ways teaches the model a contradiction; the
-report lists which chores collide, so the manifest can be narrowed. For Kinetics the label decides. Your own
+report lists which chores collide, so the manifest can be narrowed. HomER's
+segments are labelled by chore (the team's labels), and every one is kept;
+one longer than a minute becomes consecutive clips of up to a minute. Your own
 recordings are filed by folder.
 
 Each clip is cut with FFmpeg into data/clips/<label>/, silent, 8 frames a
@@ -26,7 +33,8 @@ second, 256 pixels on its short side: the model looks at 192 or 224 pixels four
 times a second, and anything more is disk. data/clips.csv lists them: clip,
 source, household, start, end (seconds in the source; a whole video is timed
 from 0), label, domain. The household is what 03 splits
-by: the EPIC participant, the Kinetics video, or your H-number.
+by: the EPIC participant, the HomER person (as the team marked them; HomER has
+no participant ids), or your H-number.
 
 The count per chore is printed at the end, with thin classes marked, and your
 own clips are tallied per chore and per home, so gaps show before training.
@@ -35,14 +43,14 @@ import argparse
 import ast
 import csv
 import subprocess
+import urllib.error
+import urllib.request
 from collections import Counter, defaultdict
-from pathlib import Path
 
 import pipeline as p
 
 LABELS = p.ML / "labels"
 EPIC_LABELS = LABELS / "epic_kitchens_100"
-KINETICS_LABELS = LABELS / "kinetics_400"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".3gp"}
 MIN_SECONDS = 2.0
 MAX_SECONDS = 60.0
@@ -104,38 +112,57 @@ def epic_candidates(manifest):
     return found, ambiguous
 
 
-def kinetics_candidates(manifest):
-    files = [KINETICS_LABELS / f"{split}.csv" for split in ("train", "validate", "val", "test")]
-    if not any(f.exists() for f in files):
-        print("Kinetics-400: annotation files not found under ml/labels/kinetics_400/; skipped")
-        return []
-    wants = defaultdict(set)
-    for chore in manifest["chores"]:
-        for source in chore.get("sources", []):
-            if source["dataset"] == "kinetics_400":
-                for label in source.get("labels", []):
-                    wants[label].add(chore["key"])
-    found = []
-    for file in files:
-        if not file.exists():
+def homer_candidates(keys):
+    """Every labelled HomER segment of a chore the model learns (or "other"),
+    cut into clips of up to a minute; and the labelled segments the model does
+    not use, counted by chore (a manual chore, until it is switched on)."""
+    segments = p.read_rows(p.HOMER_SEGMENTS, p.SEGMENT_COLUMNS)
+    if not segments:
+        print("HomER v2: no segments labelled yet (labels/homer_v2/segments.csv); skipped")
+        return [], Counter()
+    people = {r["video_id"]: r for r in p.read_rows(p.HOMER_PEOPLE, p.PEOPLE_COLUMNS)}
+    found, unused = [], Counter()
+    for row in segments:
+        key = row["chore_key"]
+        if key not in keys:
+            unused[key] += 1
             continue
-        for row in read_csv(file):
-            keys = wants.get(row["label"], set())
-            if len(keys) != 1:
-                continue
-            start, end = int(float(row["time_start"])), int(float(row["time_end"]))
-            youtube = row["youtube_id"]
+        video_id = str(row["video_id"])
+        start, end = float(row["start"]), float(row["end"])
+        while end - start >= MIN_SECONDS:
+            piece = min(end, start + MAX_SECONDS)
             found.append({
-                "label": next(iter(keys)),
-                "source": "kinetics_400",
-                "household": f"kinetics-{youtube}",
-                "video": p.RAW / "kinetics_400" / row.get("split", file.stem) / f"{youtube}_{start:06d}_{end:06d}.mp4",
-                "video_id": youtube,
-                "start": None,
-                "end": None,
-                "name": f"kinetics_{youtube}_{start:06d}",
+                "label": key,
+                "source": "homer_v2",
+                "household": f"homer-{p.homer_person(video_id, people)}",
+                "video": p.RAW / "homer_v2" / f"{video_id}.mp4",
+                "video_id": video_id,
+                "start": start,
+                "end": piece,
+                "name": f"homer_{video_id}_{int(start * 10):06d}",
             })
-    return found
+            start = piece
+    return found, unused
+
+
+def download(url, out):
+    """One HomER video, streamed to disk. False when its link has expired."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    partial = out.with_suffix(".part")
+    try:
+        with urllib.request.urlopen(url, timeout=120) as response, open(partial, "wb") as f:
+            while True:
+                chunk = response.read(1 << 20)
+                if not chunk:
+                    break
+                f.write(chunk)
+    except urllib.error.HTTPError as e:
+        partial.unlink(missing_ok=True)
+        if e.code in (401, 403, 404):
+            return False
+        raise
+    partial.replace(out)
+    return True
 
 
 def own_candidates(keys):
@@ -211,10 +238,10 @@ def main():
     manifest = p.load_manifest()
     keys = p.class_keys(manifest)
     epic, ambiguous = epic_candidates(manifest)
-    kinetics = kinetics_candidates(manifest)
+    homer, unused = homer_candidates(set(keys))
     own, unknown = own_candidates(set(keys))
-    public = spread(epic + kinetics, args.max_per_chore)
-    chosen = public + own
+    public = spread(epic, args.max_per_chore)
+    chosen = public + homer + own
 
     if args.list_videos:
         needed = sorted({c["video_id"] for c in public if c["source"] == "epic_kitchens_100"})
@@ -225,12 +252,34 @@ def main():
 
     if not args.dry_run:
         p.need_ffmpeg()
+    links = p.homer_videos() if homer and not args.dry_run else {}
+    expired = False
     rows, missing, failed = [], Counter(), Counter()
+    # HomER clips come grouped by video, so each video is fetched once and
+    # deleted as soon as its last segment is cut.
+    homer_left = Counter(c["video_id"] for c in chosen if c["source"] == "homer_v2"
+                         and not (p.CLIPS / c["label"] / f"{c['name']}.mp4").exists())
     for c in chosen:
-        if not c["video"].exists():
+        out = p.CLIPS / c["label"] / f"{c['name']}.mp4"
+        if c["source"] == "homer_v2" and not out.exists():
+            if args.dry_run or expired:
+                missing[c["source"]] += 1
+                continue
+            if not c["video"].exists():
+                link = links.get(c["video_id"])
+                if link is None:
+                    print(f"HomER video {c['video_id']} is not in data/homer_v2/videos.json; run 00_intake.py")
+                    missing[c["source"]] += 1
+                    continue
+                print(f"  downloading HomER video {c['video_id']} ({link.get('size_mb', '?')} MB)")
+                if not download(link["download_url"], c["video"]):
+                    print("A HomER link has expired. Run 00_intake.py to refresh them, then this again.")
+                    expired = True
+                    missing[c["source"]] += 1
+                    continue
+        elif not out.exists() and not c["video"].exists():
             missing[c["source"]] += 1
             continue
-        out = p.CLIPS / c["label"] / f"{c['name']}.mp4"
         if not args.dry_run and not out.exists():
             try:
                 cut(c, out)
@@ -238,7 +287,12 @@ def main():
                 failed[c["source"]] += 1
                 out.unlink(missing_ok=True)
                 continue
-        # Whole videos (Kinetics, your own) are timed from the clip itself.
+            finally:
+                if c["source"] == "homer_v2":
+                    homer_left[c["video_id"]] -= 1
+                    if homer_left[c["video_id"]] <= 0:
+                        c["video"].unlink(missing_ok=True)
+        # Whole videos (your own) are timed from the clip itself.
         start, end = c["start"], c["end"]
         if start is None:
             start, end = 0.0, (p.video_seconds(out) if not args.dry_run else 0.0)
@@ -260,6 +314,10 @@ def main():
             writer.writerows(rows)
 
     report(keys, rows, chosen, missing, failed, ambiguous, unknown, args.dry_run)
+    if unused:
+        print("\nHomER segments for chores the model does not check (manual), not cut: "
+              + ", ".join(f"{k} {v}" for k, v in sorted(unused.items())))
+        print("Switch a chore to lstm in the manifest once it has enough of them.")
 
 
 def report(keys, rows, chosen, missing, failed, ambiguous, unknown, dry_run):

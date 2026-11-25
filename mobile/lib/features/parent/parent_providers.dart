@@ -10,6 +10,7 @@ import '../../core/models/family_quest.dart';
 import '../../core/models/screen_time_report.dart';
 import '../../core/notifications/local_notifier.dart';
 import '../../core/session/session_controller.dart';
+import 'app_lock_alert.dart';
 import 'parent_api.dart';
 import 'review_watcher.dart';
 
@@ -101,10 +102,18 @@ class NotificationsController extends AsyncNotifier<NotificationFeed> {
   @override
   Future<NotificationFeed> build() => ref.watch(parentApiProvider).notifications();
 
-  /// Looks again. A failed look keeps the last feed on screen.
+  /// Looks again. A failed look keeps the last feed on screen. A phone where
+  /// App Lock has newly stopped working is announced on this phone too (AL-4,
+  /// rule 10); the first look only takes note, like the review lists'.
   Future<void> refresh() async {
     try {
+      final before = state.value;
       final feed = await ref.read(parentApiProvider).notifications();
+      if (before != null) {
+        for (final trouble in newAppLockTrouble(before.appLock, feed.appLock)) {
+          await ref.read(appNotifierProvider).show(alertForAppLock(trouble));
+        }
+      }
       if (ref.mounted) state = AsyncData(feed);
     } on ApiException catch (error, stackTrace) {
       if (ref.mounted && !state.hasValue) state = AsyncError(error, stackTrace);
@@ -118,7 +127,7 @@ class NotificationsController extends AsyncNotifier<NotificationFeed> {
     final feed = state.value;
     if (ref.mounted && feed != null) {
       // Everything carried over but the count: the alarm events too.
-      state = AsyncData(NotificationFeed(items: feed.items, alarms: feed.alarms, missed: feed.missed, unreadCount: 0));
+      state = AsyncData(NotificationFeed(items: feed.items, alarms: feed.alarms, missed: feed.missed, appLock: feed.appLock, unreadCount: 0));
     }
   }
 }

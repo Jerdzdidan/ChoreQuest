@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/session/session.dart';
 import 'core/session/session_controller.dart';
+import 'features/app_lock/app_lock_gate.dart';
 import 'features/auth/welcome_screen.dart';
 import 'features/child/child_home_screen.dart';
 import 'features/parent/parent_shell.dart';
@@ -41,7 +42,8 @@ class ChoreQuestApp extends ConsumerWidget {
       title: 'ChoreQuest',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
-      home: home,
+      // App Lock (AL-3, AL-6) works whoever is signed in, or no one.
+      home: AppLockGate(child: home),
     );
   }
 }

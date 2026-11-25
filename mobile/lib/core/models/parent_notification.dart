@@ -1,3 +1,4 @@
+import '../app_lock/app_lock_models.dart';
 import 'submission.dart';
 
 /// How much a finished quest needs the parent's eye, as the server works it
@@ -147,10 +148,65 @@ class MissedQuest {
   final String forDate;
 }
 
+/// Why App Lock is not working on a phone (AL-4, rule 10).
+enum AppLockTrouble {
+  /// A permission App Lock needs was taken away.
+  needsAttention,
+
+  /// The phone has not reported for an hour.
+  silent;
+
+  static AppLockTrouble parse(String? raw) => raw == 'silent' ? silent : needsAttention;
+}
+
+/// A phone where App Lock is not working now. It stays in the list for as
+/// long as that lasts.
+class AppLockNotification {
+  const AppLockNotification({
+    required this.deviceKey,
+    required this.phoneName,
+    required this.trouble,
+    required this.missing,
+    required this.since,
+    required this.unread,
+  });
+
+  factory AppLockNotification.fromJson(Map<String, dynamic> json) => AppLockNotification(
+        deviceKey: json['device_key'] as String,
+        phoneName: json['name'] as String? ?? 'A phone',
+        trouble: AppLockTrouble.parse(json['state'] as String?),
+        missing: [for (final key in (json['missing'] as List? ?? const [])) '$key'],
+        since: DateTime.parse(json['since'] as String),
+        unread: json['unread'] as bool? ?? false,
+      );
+
+  final String deviceKey;
+  final String phoneName;
+  final AppLockTrouble trouble;
+
+  /// The permissions its last report said were off, by key.
+  final List<String> missing;
+  final DateTime since;
+  final bool unread;
+
+  /// The missing permissions, in the words the turn-on steps use.
+  List<String> get missingTitles => [
+        for (final key in missing)
+          for (final check in AppLockCheck.values)
+            if (check.key == key) check.title,
+      ];
+}
+
 /// The feed: the latest quests, the alarm events, yesterday's missed quests,
-/// and how many arrived unseen.
+/// App Lock trouble, and how many arrived unseen.
 class NotificationFeed {
-  const NotificationFeed({required this.items, required this.unreadCount, this.alarms = const [], this.missed = const []});
+  const NotificationFeed({
+    required this.items,
+    required this.unreadCount,
+    this.alarms = const [],
+    this.missed = const [],
+    this.appLock = const [],
+  });
 
   factory NotificationFeed.fromJson(Map<String, dynamic> json) =>
       NotificationFeed(
@@ -167,11 +223,16 @@ class NotificationFeed {
           for (final raw in (json['missed'] as List? ?? const []).cast<Map<String, dynamic>>())
             MissedQuest.fromJson(raw),
         ],
+        appLock: [
+          for (final raw in (json['app_lock'] as List? ?? const []).cast<Map<String, dynamic>>())
+            AppLockNotification.fromJson(raw),
+        ],
         unreadCount: json['unread_count'] as int? ?? 0,
       );
 
   final List<ParentNotification> items;
   final List<AlarmNotification> alarms;
   final List<MissedQuest> missed;
+  final List<AppLockNotification> appLock;
   final int unreadCount;
 }

@@ -8,6 +8,7 @@ import '../../shared/avatars.dart';
 import '../../shared/credits_screen.dart';
 import '../../shared/inline_error.dart';
 import '../../shared/password_field.dart';
+import 'app_lock_screen.dart';
 import 'child_form_screen.dart';
 import 'parent_providers.dart';
 import 'sign_in_pin_screen.dart';
@@ -382,6 +383,14 @@ class _ParentProfileScreenState extends ConsumerState<ParentProfileScreen> {
           ),
           icon: const Icon(Icons.person_add_alt),
           label: const Text('Add a child'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AppLockScreen()),
+          ),
+          icon: const Icon(Icons.lock_outline),
+          label: const Text('Lock apps'),
         ),
         const Divider(height: 40),
         ListTile(

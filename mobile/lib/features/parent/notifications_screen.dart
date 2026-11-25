@@ -11,6 +11,7 @@ import '../../shared/avatars.dart';
 import '../../shared/format.dart';
 import '../../shared/submission_photo.dart';
 import '../../shared/theme.dart';
+import 'app_lock_alert.dart';
 import 'parent_providers.dart';
 import 'review_labels.dart';
 import 'submission_review_screen.dart';
@@ -104,7 +105,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     return byUrgency != 0 ? byUrgency : a.$1.compareTo(b.$1);
                   });
                 final rest = [for (final n in loaded.items) if (!n.waitsForReview) n];
-                if (loaded.items.isEmpty && loaded.alarms.isEmpty && loaded.missed.isEmpty) return const _NoPhotos();
+                if (loaded.items.isEmpty && loaded.alarms.isEmpty && loaded.missed.isEmpty && loaded.appLock.isEmpty) {
+                  return const _NoPhotos();
+                }
                 final missedByChild = <int, List<MissedQuest>>{};
                 for (final m in loaded.missed) {
                   missedByChild.putIfAbsent(m.childId, () => []).add(m);
@@ -113,6 +116,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (loaded.appLock.isNotEmpty) ...[
+                      Text('App Lock', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
+                      for (final phone in loaded.appLock) _AppLockTile(phone: phone),
+                      const SizedBox(height: 12),
+                    ],
                     if (waiting.isNotEmpty) ...[
                       Text(
                         waiting.length == 1 ? '1 quest needs you' : '${waiting.length} quests need you',
@@ -323,6 +332,50 @@ class _Mark extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A phone where App Lock is not working now (AL-4, rule 10).
+class _AppLockTile extends StatelessWidget {
+  const _AppLockTile({required this.phone});
+
+  final AppLockNotification phone;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = QuestColors.of(context).review;
+    final text = Theme.of(context).textTheme;
+    final (IconData icon, String since) = switch (phone.trouble) {
+      AppLockTrouble.needsAttention => (Icons.lock_reset_rounded, 'Since ${sentLabel(context, phone.since)}'),
+      AppLockTrouble.silent => (Icons.portable_wifi_off_rounded, 'Quiet since ${sentLabel(context, phone.since)}'),
+    };
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: tint.fill,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: tint.ink),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appLockLine(phone),
+                    style: text.bodyMedium?.copyWith(color: tint.ink, fontWeight: phone.unread ? FontWeight.w700 : null),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(since, style: text.bodySmall?.copyWith(color: tint.ink)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

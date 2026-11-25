@@ -10,14 +10,20 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import com.chorequest.applock.AppLockChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.util.TimeZone
 
 class MainActivity : FlutterActivity() {
+    private var appLock: AppLockChannel? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // App Lock (AL-3): its watcher, the phone's apps and the lock screen.
+        appLock = AppLockChannel(this, flutterEngine.dartExecutor.binaryMessenger)
 
         // The phone's timezone as an IANA name such as "Asia/Manila", so the
         // server can count days at local midnight. Reading it needs no
@@ -42,6 +48,12 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    // The watcher brings ChoreQuest to the front over a locked app.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        appLock?.onIntent(intent)
     }
 
     private fun readiness(): Map<String, Any> {

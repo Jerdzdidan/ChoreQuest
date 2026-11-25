@@ -31,6 +31,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- App Lock (AL-3). Usage access, to see which app is in front; a
+         grown-up turns it on for ChoreQuest in the phone's settings.
+         Display over other apps, so the lock screen may open over a locked
+         app from the background. A foreground service, so the watcher keeps
+         running, with its countdown as its notification. No
+         QUERY_ALL_PACKAGES: the launcher query below lists the apps with a
+         home-screen icon, which is all Lock apps shows. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <application
         android:label="ChoreQuest"
         android:name="${applicationName}"
@@ -60,6 +70,25 @@
         <!-- Warns, if the app is swiped away, that an alarm may not ring
              (the alarm plugin's notification-on-kill). -->
         <service android:name="com.gdelataillade.alarm.services.NotificationOnKillService" />
+        <!-- App Lock's watcher (AL-3). -->
+        <service
+            android:name=".applock.AppLockService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Parental app lock: watches which app is in front so that a child's locked apps open only for screen time they earned or with a parent's PIN."/>
+        </service>
+        <!-- Starts the watcher again after a restart or an update, when App
+             Lock is on. Both broadcasts come from Android only. -->
+        <receiver
+            android:name=".applock.AppLockBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -75,6 +104,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- App Lock's list of this phone's apps (AL-5): those with a
+             home-screen icon. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
         </intent>
     </queries>
 </manifest>
